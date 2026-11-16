@@ -49,4 +49,7 @@ HOUSES = [
     {"key": "librairie", "name": "Librairie", "action": "page",
      "target": "/librairie", "x": 0.73, "y": 0.89, "visible": True,
      "color": "#F8D8E4", "order": 8},
+    {"key": "cemantix", "name": "Cémantix", "action": "page",
+     "target": "/cemantix", "x": 0.27, "y": 0.95, "visible": True,
+     "color": "#FBE7A1", "order": 9},
 ]

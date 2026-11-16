@@ -18,12 +18,12 @@ from pymongo import ASCENDING, DESCENDING, IndexModel
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, seed_users
-from features import auth, books, dates, goals, houses, otters, verses
+from features import auth, books, cemantix, dates, goals, houses, otters, verses
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-FEATURE_ROUTERS = [auth.router, houses.router, dates.router, otters.router, goals.router, verses.router, books.router]
+FEATURE_ROUTERS = [auth.router, houses.router, dates.router, otters.router, goals.router, verses.router, books.router, cemantix.router]
 
 INDEXES: dict[str, list[IndexModel]] = {
     "users": [IndexModel([("email", ASCENDING)], name="email", unique=True)],
@@ -38,6 +38,7 @@ INDEXES: dict[str, list[IndexModel]] = {
     "verse_folders": [IndexModel([("name", ASCENDING)], name="name")],
     "verses": [IndexModel([("folder_id", ASCENDING), ("created_at", DESCENDING)], name="folder_created")],
     "books": [IndexModel([("created_at", ASCENDING)], name="created")],
+    "cemantix_claims": [IndexModel([("date", ASCENDING), ("user_id", ASCENDING)], name="date_user", unique=True)],
     "chapters": [IndexModel([("book_id", ASCENDING), ("order", ASCENDING)], name="book_order")],
 }
 
