@@ -1,0 +1,32 @@
+# Déploiement gratuit sur Render (un seul service : le site + l'API).
+# Les valeurs "sync: false" se saisissent dans le tableau de bord Render, jamais dans GitHub.
+services:
+  - type: web
+    name: nos-petites-maisons
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: nos_petites_maisons
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: PARTNER_EMAIL
+        sync: false
+      - key: PARTNER_NAME
+        sync: false
+      - key: PARTNER_PASSWORD
+        sync: false

@@ -1,0 +1,198 @@
+{
+  "app_name": "Our Little World",
+  "personality": "8 Hand-Drawn / Journal",
+  "personality_one_liner": "A cozy, handwritten shared notebook where every memory and goal feels personal, soft, and crafted by hand.",
+  "color": {
+    "surface": "#F4F0E6",
+    "onSurface": "#3E3A35",
+    "surfaceSecondary": "#EAE4D3",
+    "onSurfaceSecondary": "#3E3A35",
+    "surfaceTertiary": "#DFD8C4",
+    "onSurfaceTertiary": "#3E3A35",
+    "surfaceInverse": "#2C2A26",
+    "onSurfaceInverse": "#F4F0E6",
+    "brand": "#D4A373",
+    "brandPrimary": "#D4A373",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#CCD5AE",
+    "onBrandSecondary": "#2C2A26",
+    "brandTertiary": "#FAEDCD",
+    "onBrandTertiary": "#3E3A35",
+    "success": "#A3B18A",
+    "onSuccess": "#FFFFFF",
+    "warning": "#E9C46A",
+    "onWarning": "#2C2A26",
+    "error": "#E07A5F",
+    "onError": "#FFFFFF",
+    "info": "#81B29A",
+    "onInfo": "#FFFFFF",
+    "border": "#D1C7B1",
+    "borderStrong": "#AFA38D",
+    "divider": "#D1C7B1",
+    "muted": "#8B8476",
+    "dark": {
+      "surface": "#1E1C1A",
+      "onSurface": "#E6DFD3",
+      "surfaceSecondary": "#2A2724",
+      "onSurfaceSecondary": "#E6DFD3",
+      "surfaceTertiary": "#35322E",
+      "onSurfaceTertiary": "#E6DFD3",
+      "surfaceInverse": "#F4F0E6",
+      "onSurfaceInverse": "#1E1C1A",
+      "brand": "#FFB703",
+      "brandPrimary": "#FFB703",
+      "onBrandPrimary": "#3E3A35",
+      "brandSecondary": "#7F6A59",
+      "onBrandSecondary": "#E6DFD3",
+      "brandTertiary": "#3B3329",
+      "onBrandTertiary": "#E6DFD3",
+      "success": "#5C7053",
+      "onSuccess": "#FFFFFF",
+      "warning": "#FFB703",
+      "onWarning": "#3E3A35",
+      "error": "#9B4838",
+      "onError": "#FFFFFF",
+      "info": "#477260",
+      "onInfo": "#FFFFFF",
+      "border": "#3E3A35",
+      "borderStrong": "#5B564F",
+      "divider": "#3E3A35",
+      "muted": "#948B7D"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Caveat",
+    "textFontFamily": "Nunito",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous, organic spacing mimicking a physical notebook. Margin and padding should feel slightly relaxed.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 0,
+  "navigation": "stack_only",
+  "icon_set": "Feather",
+  "glassmorphism": {
+    "enabled": false,
+    "do's": [],
+    "dont's": [
+      "No glassmorphism, blur, or transparency effects. This is a matte paper environment."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "none",
+      "android": "none",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "none",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "A custom layout representing a ruled notebook sheet with hand-drawn houses scattered on it.",
+      "states": {
+        "loading": "Centered pencil spinning or hand-drawn loader.",
+        "empty": "No houses yet, show a 'Setup in Admin' placeholder.",
+        "error": "Torn paper motif with retry button."
+      },
+      "layout": "Full-bleed 'surface' color with repeating SVG horizontal lines ('border' color) matching a notebook sheet. A custom absolute-positioned container for houses and paths. In Light mode, houses sit on paper. In Dark (Night) mode, the paper is dark, and streetlamps placed near paths have an SVG radial gradient (amber/yellow) to simulate glowing lights. Handwritten titles under each house."
+    },
+    {
+      "name": "Nos dates",
+      "purpose": "A date ideas list divided into 'To do' and 'Already done'.",
+      "states": {
+        "loading": "Skeleton rows that look like sketched rectangles.",
+        "empty": "A sketched empty box and 'Add your first date idea!' text.",
+        "error": "Oops text with a sketched refresh icon."
+      },
+      "layout": "Tabbed view (À faire / Déjà fait) at top. List items look like handwritten bullet points on the notebook lines. Checkbox (drawn empty square/filled square). Text includes objective, optional date, and a soft note. Background remains the ruled notebook pattern."
+    },
+    {
+      "name": "Loutres",
+      "purpose": "Send otter stickers to each other with timestamp.",
+      "states": {
+        "loading": "Pulsing otter placeholder.",
+        "empty": "Text: 'Send your first otter to say hi!'",
+        "error": "Failed to load messages, tap to retry."
+      },
+      "layout": "Inbox-like layout but simplified. A bottom shelf with 8-10 otter stickers (use image placeholders for now). Main view is a list of sent/received stickers placed on the notebook lines, staggered left/right. Small handwritten timestamp below each sticker. No chat bubbles, just the sticker transparently on paper."
+    },
+    {
+      "name": "Objectifs de couple",
+      "purpose": "Track relationship goals (Propose, Active, Completed, Pick Trophy).",
+      "states": {
+        "loading": "Spinner.",
+        "empty": "No goals set. Floating CTA to add one.",
+        "error": "Retry connection."
+      },
+      "layout": "Stack of slightly rotated paper cards (surfaceSecondary) sitting on the main notebook background. Each card has handwritten text. When completed, show an inline grid to select a trophy icon for the shelf."
+    },
+    {
+      "name": "Nos trophées",
+      "purpose": "A virtual shelf displaying earned trophies from completed goals.",
+      "states": {
+        "loading": "Empty shelves drawing.",
+        "empty": "Empty wooden shelf illustration, 'Complete a goal to earn your first trophy!'",
+        "error": "Retry."
+      },
+      "layout": "Vertical ScrollView with repeating horizontal shelf illustrations (wooden plank). Trophies (images) sit on the shelves. Below each trophy is a handwritten label (Goal Name) and date."
+    },
+    {
+      "name": "Réglages (Admin)",
+      "purpose": "Admin screen to toggle houses, edit links, and enter map-edit mode.",
+      "states": {
+        "loading": "Loading settings...",
+        "empty": "N/A",
+        "error": "Failed to load admin panel."
+      },
+      "layout": "Standard vertical list but styled as a sketched menu. Toggles for features. 'Edit Map' button switches the Home screen to a drag-and-drop mode using PanGestureHandler to reposition houses."
+    }
+  ],
+  "images": {
+    "house_placeholder": {
+      "url": "https://images.unsplash.com/photo-1702234863760-3736954ad424?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxoYW5kJTIwZHJhd24lMjBob3VzZXxlbnwwfHx8fDE3OTQ1MTQxOTR8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Hand drawn house placeholder"
+    },
+    "otter_sticker_placeholder": {
+      "url": "https://images.unsplash.com/photo-1792571393798-eee87f560322?crop=entropy&cs=srgb&fm=jpg&ixid=M3w8NjAzMzl8MHwxfHNlYXJjaHwxfHxjdXRlJTIwb3R0ZXIlMjBjYXJ0b29ufGVufDB8fHx8MTc5NDUxNDE5NHww&ixlib=rb-4.1.0&q=85",
+      "alt": "Cute otter placeholder"
+    },
+    "trophy_placeholder": {
+      "url": "https://images.unsplash.com/photo-1790553589409-b3b321b9c0e0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w8NjAzMzV8MHwxfHNlYXJjaHwxfHxnb2xkZW4lMjB0cm9waHklMjBpbGx1c3RyYXRpb258ZW58MHx8fHwxNzk0NTE0MTk0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Golden trophy placeholder"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the 'Hand-Drawn / Journal' personality. Implement Caveat for titles and Nunito for body text via expo-font.",
+    "Implement the notebook background using a full-height container that renders repeating SVG lines (stroke=color.border), spaced appropriately (e.g., every 30-40px vertically) to simulate a ruled notebook.",
+    "The Home screen is a canvas, not a list. Use absolute positioning based on X/Y coordinates for the houses. The paths between houses should be drawn using react-native-svg lines or dashed paths connecting the coordinates.",
+    "Implement a Theme Context for Day/Night. In 'Night' mode, swap the palette to the 'dark' tokens. The defining feature of Night mode is rendering streetlamps (small SVGs) near the paths with an SVG <RadialGradient> overlay (brandPrimary color) to simulate a soft, glowing light.",
+    "Use react-native-gesture-handler (PanGestureHandler or Gesture.Pan) in the 'Edit Map' Admin mode to let the user drag houses around and save their new coordinates.",
+    "No glassmorphism, no heavy shadows. Use flat, drawn aesthetics with organic, slightly imperfect spacing.",
+    "Otters screen should bypass traditional chat bubbles; just render the image placeholder directly on the ruled lines, offset slightly left or right, with a handwritten timestamp underneath.",
+    "Avoid generic AI components like large floating FABs unless styled organically (e.g., a sketched circle icon)."
+  ]
+}
