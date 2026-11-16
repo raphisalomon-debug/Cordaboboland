@@ -31,4 +31,5 @@ export const HOUSE_IMAGES: Record<string, ImageSource | number | null> = {
   versets: null,
   librairie: null,
   cemantix: null,
+  voyages: null,
 };

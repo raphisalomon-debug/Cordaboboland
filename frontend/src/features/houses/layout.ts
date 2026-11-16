@@ -7,7 +7,12 @@ export function autoLayout(houses: House[]): House[] {
   const n = sorted.length;
   const spacing = n > 1 ? Math.min(0.78 / (n - 1), 0.2) : 0;
   const start = 0.5 - (spacing * (n - 1)) / 2;
-  return sorted.map((h, i) => ({ ...h, x: i % 2 === 0 ? 0.27 : 0.73, y: start + i * spacing }));
+  // Le voilier ferme toujours le chemin, dans le coin en bas à droite : le zigzag part donc de la fin.
+  const boatLast = sorted[n - 1]?.key === "voyages";
+  return sorted.map((h, i) => {
+    const right = boatLast ? (n - 1 - i) % 2 === 0 : i % 2 === 1;
+    return { ...h, x: right ? 0.73 : 0.27, y: start + i * spacing };
+  });
 }
 
 /** New path order from where houses sit on the sheet (top to bottom). */

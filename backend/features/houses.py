@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from core import BaseDocument, User, db, get_current_user, get_file_data, put_file, require_admin
-from houses_config import HOUSES
+from houses_config import HOUSES, REMOVED_HOUSES
 
 router = APIRouter(prefix="/api", tags=["houses"])
 
@@ -60,6 +60,8 @@ async def update_settings(body: SettingsPatch, _: User = Depends(require_admin))
 
 async def seed_houses() -> None:
     """Insert houses from houses_config.py that are not in the DB yet."""
+    # Maisons retirées de l'app : on les enlève aussi de la base.
+    await db.houses.delete_many({"key": {"$in": REMOVED_HOUSES}})
     for h in HOUSES:
         if not await db.houses.find_one({"key": h["key"]}):
             await db.houses.insert_one(House(**h).to_mongo())
