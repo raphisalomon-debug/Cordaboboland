@@ -35,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (typeof saved === "string") {
         setApiToken(saved);
         try {
-          setUser(await api<User>("/auth/me"));
+          // Délai maximal : le serveur gratuit peut mettre ~1 min à se réveiller, mais jamais plus.
+          setUser(await api<User>("/auth/me", { timeoutMs: 70000 }));
         } catch {
           setApiToken(null);
         }

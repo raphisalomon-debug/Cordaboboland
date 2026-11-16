@@ -1,4 +1,5 @@
 import { useFonts } from "expo-font";
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -17,13 +18,19 @@ LogBox.ignoreAllLogs(true);
 
 export default function RootLayout() {
   // Icon fonts are pre-loaded here too so icons show instantly (Expo Go Android).
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontsError] = useFonts({
     "Caveat-Bold": require("../assets/fonts/Caveat-Bold.ttf"),
     "Nunito-Regular": require("../assets/fonts/Nunito-Regular.ttf"),
     "Nunito-Bold": require("../assets/fonts/Nunito-Bold.ttf"),
     Feather: require("../assets/fonts/Feather.ttf"),
     MaterialDesignIcons: require("../assets/fonts/MaterialDesignIcons.ttf"),
   });
+  // Si les polices tardent ou échouent, on démarre quand même au bout de 4 s plutôt que de rester bloqué.
+  const [fontsGaveUp, setFontsGaveUp] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFontsGaveUp(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -32,7 +39,7 @@ export default function RootLayout() {
           <KeyboardProvider>
             <AuthProvider>
               <ToastProvider>
-                {fontsLoaded ? <AppStack /> : <LoadingScreen fontsReady={false} />}
+                {fontsLoaded || fontsError || fontsGaveUp ? <AppStack /> : <LoadingScreen fontsReady={false} stage="polices" />}
               </ToastProvider>
             </AuthProvider>
           </KeyboardProvider>
@@ -46,7 +53,7 @@ export default function RootLayout() {
 function AppStack() {
   const { user, ready } = useAuth();
   const { scheme, colors } = useTheme();
-  if (!ready) return <LoadingScreen />;
+  if (!ready) return <LoadingScreen stage="connexion" />;
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />

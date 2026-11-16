@@ -33,10 +33,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Petites maisons" />
     <script>
+      // Nettoie un éventuel ancien service worker et ses caches (version précédente de l'app).
       if ("serviceWorker" in navigator) {
-        window.addEventListener("load", function () {
-          navigator.serviceWorker.register("/sw.js").catch(function () {});
-        });
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          rs.forEach(function (r) { r.unregister(); });
+        }).catch(function () {});
+      }
+      if (window.caches) {
+        caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
       }
     </script>
   </head>
@@ -46,6 +50,6 @@
     <noscript> You need to enable JavaScript to run this app. </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js" defer></script><script src="/_expo/static/js/web/__common-08cfc402a5c18f996b2598c54992c634.js" defer></script><script src="/_expo/static/js/web/entry-816f9b54be8ad09ef4b81226c7112b1b.js" defer></script>
+  <script src="/_expo/static/js/web/__expo-metro-runtime-8c088df87a31e4e6accd81c554ec290d.js" defer></script><script src="/_expo/static/js/web/__common-dd3e7d228d7618e68ca897b9c210aeda.js" defer></script><script src="/_expo/static/js/web/entry-c81aa544431679cec1c0682cb6628bff.js" defer></script>
 </body>
 </html>

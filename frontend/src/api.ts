@@ -18,12 +18,23 @@ export function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function api<T = any>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: opts.method ?? "GET",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-  });
+export async function api<T = any>(
+  path: string,
+  opts: { method?: string; body?: unknown; timeoutMs?: number } = {},
+): Promise<T> {
+  const controller = opts.timeoutMs ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), opts.timeoutMs) : null;
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: opts.method ?? "GET",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: controller?.signal,
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
   if (res.status === 401 && token) onUnauthorized();
   if (!res.ok) {
     let msg = "Oups, quelque chose s'est mal passé";
