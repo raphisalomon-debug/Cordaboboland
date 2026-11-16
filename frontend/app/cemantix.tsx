@@ -3,7 +3,8 @@ import { Feather } from "@react-native-vector-icons/feather";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import * as Haptics from "expo-haptics";
-import { Linking, Platform, RefreshControl, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { Linking, Platform, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Paper } from "@/src/components/Paper";
@@ -30,11 +31,24 @@ export default function CemantixScreen() {
   const iWon = !!winner && winner.user_id === user?.id;
   const myClaim = data?.claims.find((c) => c.user_id === user?.id);
 
+  const [word, setWord] = useState("");
+  const status = data?.me_status ?? null;
+  const pendingMine = status === "pending";
+  const verifiedMine = status === "verified";
+
   const declare = () => {
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    found.mutate(undefined, {
-      onSuccess: (s) => toast(s.winner?.user_id === user?.id ? "Tu es le premier ! 👑" : "Bien joué, tu as trouvé !"),
-      onError: (e: Error) => toast(e.message),
+    if (!word.trim()) return toast("Écris d'abord le mot que tu as trouvé");
+    found.mutate(word, {
+      onSuccess: (s) => {
+        setWord("");
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (s.me_status === "pending") toast("Mot envoyé, il sera vérifié dès que la solution du jour est publiée");
+        else toast(s.winner?.user_id === user?.id ? "Bon mot, tu es le premier ! 👑" : "Bon mot, bien joué !");
+      },
+      onError: (e: Error) => {
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        toast(e.message);
+      },
     });
   };
 
@@ -50,6 +64,7 @@ export default function CemantixScreen() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor={colors.brandPrimary} />}
         >
           <Text style={styles.date}>{dayjs(data.date).format("dddd D MMMM")}</Text>
+          <Text style={styles.number}>Cémantix n° {data.number}</Text>
 
           <View style={[styles.crownCard, winner && styles.crownCardWon]} testID="cemantix-crown">
             {winner ? (
@@ -75,24 +90,44 @@ export default function CemantixScreen() {
             onPress={() => Linking.openURL(data.link)}
           />
 
-          {data.me_found ? (
+          {verifiedMine ? (
             <View style={styles.doneRow} testID="cemantix-me-found">
               <Feather name="check-circle" size={20} color={colors.success} />
               <Text style={styles.doneText}>
-                {iWon ? "Tu as gagné aujourd'hui !" : `Tu as trouvé à ${hour(myClaim!.found_at)}`}
+                {iWon ? "Tu as gagné aujourd'hui !" : `Mot vérifié, trouvé à ${hour(myClaim!.found_at)}`}
               </Text>
+            </View>
+          ) : pendingMine ? (
+            <View style={styles.doneRow} testID="cemantix-me-pending">
+              <Feather name="clock" size={20} color={colors.muted} />
+              <Text style={styles.doneText}>Mot envoyé, en attente de vérification</Text>
               <Text style={styles.undo} testID="cemantix-undo" onPress={() => undo.mutate()} suppressHighlighting>
                 Annuler
               </Text>
             </View>
           ) : (
-            <SketchButton
-              testID="cemantix-found-button"
-              label="J'ai trouvé le mot !"
-              icon="flag"
-              onPress={declare}
-              loading={found.isPending}
-            />
+            <>
+              <TextInput
+                testID="cemantix-word-input"
+                style={styles.input}
+                value={word}
+                onChangeText={setWord}
+                placeholder="Le mot que tu as trouvé"
+                placeholderTextColor={colors.muted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+                returnKeyType="send"
+                onSubmitEditing={declare}
+              />
+              <SketchButton
+                testID="cemantix-found-button"
+                label="J'ai trouvé : vérifier"
+                icon="flag"
+                onPress={declare}
+                loading={found.isPending}
+              />
+            </>
           )}
 
           <Text style={styles.sectionTitle}>Aujourd'hui</Text>
@@ -106,7 +141,11 @@ export default function CemantixScreen() {
                     {s.name}
                   </Text>
                   <Text style={styles.rowStatus}>
-                    {claim ? `a trouvé à ${hour(claim.found_at)}` : "cherche encore…"}
+                    {claim
+                      ? `a trouvé à ${hour(claim.found_at)}`
+                      : data.pending.some((p) => p.user_id === s.user_id)
+                        ? "a envoyé un mot, à vérifier…"
+                        : "cherche encore…"}
                   </Text>
                 </View>
               );
@@ -123,8 +162,8 @@ export default function CemantixScreen() {
             ))}
           </View>
           <Text style={styles.footnote}>
-            Le mot change chaque nuit à minuit. Appuie sur « J'ai trouvé » dès que tu as la réponse : c'est l'heure
-            enregistrée qui compte.
+            Le mot change chaque nuit à minuit. Tape le mot trouvé : il est comparé à la solution du jour d'Alucare, et
+            c'est l'heure d'envoi du bon mot qui compte.
           </Text>
         </ScrollView>
       )}
@@ -135,6 +174,18 @@ export default function CemantixScreen() {
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
   date: { fontFamily: fonts.hand, fontSize: 26, color: c.onSurface, textTransform: "capitalize", textAlign: "center" },
+  number: { fontFamily: fonts.body, fontSize: 14, color: c.muted, textAlign: "center", marginTop: -10 },
+  input: {
+    fontFamily: fonts.body,
+    fontSize: 18,
+    color: c.onSurface,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    borderRadius: 14,
+    backgroundColor: c.surfaceSecondary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
   crownCard: {
     alignItems: "center",
     gap: 4,

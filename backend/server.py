@@ -39,6 +39,7 @@ INDEXES: dict[str, list[IndexModel]] = {
     "verses": [IndexModel([("folder_id", ASCENDING), ("created_at", DESCENDING)], name="folder_created")],
     "books": [IndexModel([("created_at", ASCENDING)], name="created")],
     "cemantix_claims": [IndexModel([("date", ASCENDING), ("user_id", ASCENDING)], name="date_user", unique=True)],
+    "cemantix_solutions": [IndexModel([("date", ASCENDING)], name="date", unique=True)],
     "chapters": [IndexModel([("book_id", ASCENDING), ("order", ASCENDING)], name="book_order")],
 }
 
