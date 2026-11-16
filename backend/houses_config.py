@@ -34,12 +34,9 @@ HOUSES = [
     {"key": "dates", "name": "Nos dates", "action": "page",
      "target": "/dates", "x": 0.27, "y": 0.33, "visible": True,
      "color": "#FAEDCD", "order": 3},
-    {"key": "objectifs", "name": "Objectifs", "action": "page",
+    {"key": "objectifs", "name": "Objectifs et trophées", "action": "page",
      "target": "/objectifs", "x": 0.27, "y": 0.56, "visible": True,
      "color": "#E3D3EE", "order": 4},
-    {"key": "trophees", "name": "Nos trophées", "action": "page",
-     "target": "/trophees", "x": 0.73, "y": 0.67, "visible": True,
-     "color": "#F2D7B6", "order": 5},
     {"key": "versets", "name": "Nos versets", "action": "page",
      "target": "/versets", "x": 0.27, "y": 0.78, "visible": True,
      "color": "#D6E5D8", "order": 6},
@@ -52,7 +49,13 @@ HOUSES = [
     {"key": "voyages", "name": "Nos voyages", "action": "page",
      "target": "/voyages", "x": 0.73, "y": 0.93, "visible": True,
      "color": "#C9DDF0", "order": 10},
+    {"key": "fleuriste", "name": "Fleuriste", "action": "page",
+     "target": "/fleuriste", "x": 0.27, "y": 0.8, "visible": True,
+     "color": "#F4C2D7", "order": 11},
 ]
 
 # Maisons supprimées de l'app (effacées de la base au démarrage).
-REMOVED_HOUSES = ["loutres"]
+REMOVED_HOUSES = ["loutres", "trophees"]
+
+# Maisons renommées : {clé: (ancien nom, nouveau nom)} ; appliqué seulement si le nom n'a pas été changé dans l'app.
+RENAMED_HOUSES = {"objectifs": ("Objectifs", "Objectifs et trophées")}

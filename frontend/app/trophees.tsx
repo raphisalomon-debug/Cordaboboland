@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Paper } from "@/src/components/Paper";
 import { Loading, ScreenHeader } from "@/src/components/ui";
+import { GoalsTabs } from "@/src/features/goals/GoalsTabs";
 import { useTrophies } from "@/src/features/goals/api";
 import { TrophyIcon } from "@/src/features/goals/TrophyIcon";
 import { fonts, makeStyles, useTheme } from "@/src/theme";
@@ -26,7 +27,8 @@ export default function TropheesScreen() {
   return (
     <View style={styles.root}>
       <Paper />
-      <ScreenHeader title="Nos trophées" testID="trophies-header" />
+      <ScreenHeader title="Objectifs et trophées" testID="trophies-header" />
+      <GoalsTabs current="trophees" />
       {isLoading ? (
         <Loading />
       ) : (

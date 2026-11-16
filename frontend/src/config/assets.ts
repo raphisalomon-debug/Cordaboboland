@@ -32,4 +32,5 @@ export const HOUSE_IMAGES: Record<string, ImageSource | number | null> = {
   librairie: null,
   cemantix: null,
   voyages: null,
+  fleuriste: null,
 };

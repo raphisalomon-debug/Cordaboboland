@@ -11,6 +11,7 @@ import { useAuth } from "@/src/auth";
 import { Paper } from "@/src/components/Paper";
 import { Sheet } from "@/src/components/Sheet";
 import { useToast } from "@/src/components/Toast";
+import { GoalsTabs } from "@/src/features/goals/GoalsTabs";
 import { EmptyState, Field, IconButton, Loading, ScreenHeader, SketchButton } from "@/src/components/ui";
 import { TROPHIES } from "@/src/config/trophies";
 import { Goal, useGoals } from "@/src/features/goals/api";
@@ -92,11 +93,8 @@ export default function ObjectifsScreen() {
   return (
     <View style={styles.root}>
       <Paper />
-      <ScreenHeader
-        title="Objectifs"
-        testID="goals-header"
-        right={<IconButton icon="award" testID="open-trophies-button" onPress={() => router.push("/trophees")} />}
-      />
+      <ScreenHeader title="Objectifs et trophées" testID="goals-header" />
+      <GoalsTabs current="objectifs" />
       {isLoading ? (
         <Loading />
       ) : (
