@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { Animated, LayoutChangeEvent, PanResponder, Pressable, Text, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
+import { BOAT_KEY } from "@/src/features/houses/layout";
 import { StreetLamp } from "@/src/components/StreetLamp";
 import { House } from "@/src/features/houses/api";
 import { HouseImage } from "@/src/features/houses/HouseImage";
@@ -36,7 +37,7 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove }:
 
   // Path segments (quadratic curves) + lamp positions between consecutive houses.
   const { paths, lamps, pathPts, housePts } = useMemo(() => {
-    const sorted = [...houses].sort((a, b) => a.order - b.order);
+    const sorted = houses.filter((h) => h.key !== BOAT_KEY).sort((a, b) => a.order - b.order);
     const pts: Pt[] = sorted.map((h) => ({ x: h.x * size.w, y: h.y * size.h + houseSize * 0.38 }));
     const out: { d: string }[] = [];
     const lampPts: Pt[] = [];
@@ -80,7 +81,7 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove }:
   );
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayout} testID="village-canvas">
+    <View style={{ flex: 1, overflow: "hidden" }} onLayout={onLayout} testID="village-canvas">
       {size.w > 0 && (
         <>
           <Svg width={size.w} height={size.h} style={{ position: "absolute" }} pointerEvents="none">
@@ -114,6 +115,7 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove }:
           {lamps.map((l, i) => (
             <StreetLamp key={i} x={l.x} y={l.y} lit={isNight} />
           ))}
+          {houses.some((h) => h.key === BOAT_KEY) && <Lake w={size.w} h={size.h} />}
           {houses.map((h) => (
             <HouseSpot
               key={h.key}
@@ -130,6 +132,33 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove }:
         </>
       )}
     </View>
+  );
+}
+
+/** Un coin de lac en bas à droite : on n'en voit qu'un bout, le reste sort de la feuille. */
+function Lake({ w, h }: { w: number; h: number }) {
+  const { colors } = useTheme();
+  const { isNight } = useNightMode();
+  const lw = w * 0.66;
+  const lh = h * 0.2;
+  const water = isNight ? "#2F4558" : "#C9DDF0";
+  const deep = isNight ? "#3C566C" : "#A9C8E4";
+  return (
+    <Svg width={lw} height={lh} viewBox="0 0 100 40" style={{ position: "absolute", right: 0, bottom: 0 }} pointerEvents="none">
+      <Path
+        d="M18 40 Q10 28 22 18 Q30 10 46 12 Q58 3 74 9 Q88 4 106 8 L106 44 L18 44 Z"
+        fill={water}
+        stroke={colors.houseInk}
+        strokeWidth={0.9}
+        strokeLinejoin="round"
+      />
+      <Path d="M24 40 Q18 30 27 22 Q34 16 46 18" stroke={deep} strokeWidth={1.4} fill="none" strokeLinecap="round" />
+      <Path d="M30 31 q3 -2 6 0 t6 0" stroke={deep} strokeWidth={0.9} fill="none" strokeLinecap="round" />
+      <Path d="M70 20 q3 -2 6 0 t6 0" stroke={deep} strokeWidth={0.9} fill="none" strokeLinecap="round" />
+      <Path d="M54 36 q3 -2 6 0 t6 0" stroke={deep} strokeWidth={0.9} fill="none" strokeLinecap="round" />
+      {/* roseaux au bord */}
+      <Path d="M20 22 L19 14 M23 20 L24 12 M26 18 L26 11" stroke={colors.leafDark} strokeWidth={1} strokeLinecap="round" />
+    </Svg>
   );
 }
 

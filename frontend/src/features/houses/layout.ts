@@ -2,17 +2,17 @@
 // zig-zag, evenly spread over the sheet. Hiding a house closes the gap.
 import { House } from "@/src/features/houses/api";
 
+/** Le voilier n'est pas sur le chemin : il flotte sur un lac, en bas à droite de la feuille. */
+export const BOAT_KEY = "voyages";
+
 export function autoLayout(houses: House[]): House[] {
   const sorted = [...houses].sort((a, b) => a.order - b.order);
-  const n = sorted.length;
-  const spacing = n > 1 ? Math.min(0.78 / (n - 1), 0.2) : 0;
-  const start = 0.5 - (spacing * (n - 1)) / 2;
-  // Le voilier ferme toujours le chemin, dans le coin en bas à droite : le zigzag part donc de la fin.
-  const boatLast = sorted[n - 1]?.key === "voyages";
-  return sorted.map((h, i) => {
-    const right = boatLast ? (n - 1 - i) % 2 === 0 : i % 2 === 1;
-    return { ...h, x: right ? 0.73 : 0.27, y: start + i * spacing };
-  });
+  const land = sorted.filter((h) => h.key !== BOAT_KEY);
+  const boat = sorted.filter((h) => h.key === BOAT_KEY);
+  const n = land.length;
+  const spacing = n > 1 ? Math.min(0.09, 0.62 / (n - 1)) : 0;
+  const placed = land.map((h, i) => ({ ...h, x: i % 2 === 0 ? 0.27 : 0.73, y: 0.1 + i * spacing }));
+  return [...placed, ...boat.map((h) => ({ ...h, x: 0.77, y: 0.905 }))];
 }
 
 /** New path order from where houses sit on the sheet (top to bottom). */
