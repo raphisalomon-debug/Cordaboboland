@@ -1,7 +1,7 @@
 // Accueil : la feuille de cahier avec le petit village.
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,6 +12,8 @@ import { Paper } from "@/src/components/Paper";
 import { useToast } from "@/src/components/Toast";
 import { EmptyState, IconButton, Loading } from "@/src/components/ui";
 import { LOGO_IMAGE } from "@/src/config/assets";
+import { GiftModal } from "@/src/features/fleuriste/GiftModal";
+import { useGarden, usePlant, useUnplanted } from "@/src/features/fleuriste/api";
 import { House, useAppSettings, useHouses } from "@/src/features/houses/api";
 import { autoLayout } from "@/src/features/houses/layout";
 import { Village } from "@/src/features/houses/Village";
@@ -49,6 +51,13 @@ export default function Home() {
     }
     lastCount.current = unread.count;
   }, [unread, toast]);
+
+  // Bouquet offert par l'autre : fenêtre en grand, puis on touche le gazon pour le planter.
+  const { data: gift } = useUnplanted();
+  const { data: garden } = useGarden();
+  const plant = usePlant();
+  const [later, setLater] = useState(false);
+  const [planting, setPlanting] = useState(false);
 
   const visible = (houses ?? []).filter((h) => h.visible);
   const placed = settings?.auto_layout === false ? visible : autoLayout(visible);
@@ -106,9 +115,38 @@ export default function Home() {
             text="Active des maisons depuis les Réglages."
           />
         ) : (
-          <Village houses={placed} badges={badges} onPressHouse={openHouse} />
+          <Village
+            houses={placed}
+            badges={badges}
+            onPressHouse={openHouse}
+            garden={garden ?? []}
+            planting={planting && !!gift}
+            onPlantRefused={() => toast("Pas sur une maison ni dans le lac : choisis un coin de gazon")}
+            onPlantAt={(x, y) =>
+              gift &&
+              plant.mutate(
+                { id: gift.id, x, y },
+                {
+                  onSuccess: () => {
+                    setPlanting(false);
+                    toast("Planté ! 🌱");
+                  },
+                  onError: (e: Error) => toast(e.message),
+                },
+              )
+            }
+          />
         )}
       </View>
+      {planting && !!gift && (
+        <View style={styles.plantBanner} pointerEvents="box-none" testID="plant-banner">
+          <Text style={styles.plantText}>Touche un coin de gazon pour planter ton bouquet 🌱</Text>
+          <Text style={styles.plantCancel} onPress={() => { setPlanting(false); setLater(true); }} suppressHighlighting>
+            Annuler
+          </Text>
+        </View>
+      )}
+      <GiftModal bouquet={!later && !planting ? (gift ?? null) : null} onPlant={() => setPlanting(true)} onLater={() => setLater(true)} />
       <View style={{ paddingBottom: insets.bottom + 8 }}>
         <VerseOfDay />
       </View>
@@ -122,4 +160,19 @@ const useStyles = makeStyles((c) => ({
   title: { fontFamily: fonts.hand, fontSize: 25, color: c.onSurface },
   hello: { fontFamily: fonts.body, fontSize: 14, color: c.muted, marginTop: -4 },
   sheet: { flex: 1, marginTop: 4 },
+  plantBanner: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    top: 96,
+    alignItems: "center",
+    gap: 4,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: c.borderStrong,
+    backgroundColor: c.surface,
+  },
+  plantText: { fontFamily: fonts.bodyBold, fontSize: 15, color: c.onSurface, textAlign: "center" },
+  plantCancel: { fontFamily: fonts.body, fontSize: 13, color: c.muted, textDecorationLine: "underline", padding: 4 },
 }));

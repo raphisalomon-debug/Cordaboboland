@@ -6,6 +6,8 @@ import { Animated, LayoutChangeEvent, PanResponder, Pressable, Text, View } from
 import Svg, { Circle, Path } from "react-native-svg";
 
 import { BOAT_KEY } from "@/src/features/houses/layout";
+import { GardenItem } from "@/src/features/fleuriste/api";
+import { PlantView } from "@/src/features/fleuriste/FlowerArt";
 import { StreetLamp } from "@/src/components/StreetLamp";
 import { House } from "@/src/features/houses/api";
 import { HouseImage } from "@/src/features/houses/HouseImage";
@@ -20,12 +22,17 @@ type Props = {
   badges?: Record<string, number>;
   onPressHouse?: (h: House) => void;
   onMove?: (key: string, x: number, y: number) => void;
+  garden?: GardenItem[]; // bouquets plantés dans le gazon
+  planting?: boolean; // un bouquet attend d'être planté : on touche le gazon
+  onPlantAt?: (x: number, y: number) => void; // position en fraction de la feuille
+  onPlantRefused?: () => void;
 };
 
 type Pt = { x: number; y: number };
 
-export function Village({ houses, editable, badges = {}, onPressHouse, onMove }: Props) {
+export function Village({ houses, editable, badges = {}, onPressHouse, onMove, garden = [], planting, onPlantAt, onPlantRefused }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const lastTouch = useRef({ x: NaN, y: NaN });
   const { isNight } = useNightMode();
   const { colors } = useTheme();
   const houseSize = Math.min(size.w * 0.3, 118, size.h * 0.17);
@@ -115,6 +122,14 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove }:
           {lamps.map((l, i) => (
             <StreetLamp key={i} x={l.x} y={l.y} lit={isNight} />
           ))}
+          {garden.map((g) => {
+            const ps = Math.max(56, Math.min(78, size.w * 0.17));
+            return (
+              <View key={g.id} pointerEvents="none" style={{ position: "absolute", left: g.x * size.w - ps / 2, top: g.y * size.h - ps * 0.88 }} testID={`planted-${g.id}`}>
+                <PlantView flowers={g.flowers} size={ps} />
+              </View>
+            );
+          })}
           {houses.some((h) => h.key === BOAT_KEY) && <Lake w={size.w} h={size.h} />}
           {houses.map((h) => (
             <HouseSpot
@@ -129,6 +144,26 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove }:
               onMove={onMove}
             />
           ))}
+          {planting && (
+            <Pressable
+              style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
+              testID="plant-overlay"
+              onPressIn={(e) => {
+                // locationX/Y n'existent que sur l'évènement d'appui (pas sur le clic) : on les garde pour onPress.
+                lastTouch.current = { x: e.nativeEvent.locationX, y: e.nativeEvent.locationY };
+              }}
+              onPress={() => {
+                const { x, y } = lastTouch.current;
+                if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+                const onHouse = houses.some(
+                  (h) => Math.abs(x - h.x * size.w) < houseSize * 0.55 && y > h.y * size.h - houseSize * 0.55 && y < h.y * size.h + houseSize * 0.75,
+                );
+                const inLake = houses.some((h) => h.key === BOAT_KEY) && x > size.w * 0.34 && y > size.h * 0.8;
+                if (onHouse || inLake) return onPlantRefused?.();
+                onPlantAt?.(x / size.w, y / size.h);
+              }}
+            />
+          )}
         </>
       )}
     </View>

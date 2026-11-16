@@ -5,7 +5,7 @@ from typing import Annotated, List, Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from core import User, db, get_current_user, now_iso, oid
+from core import User, db, get_current_user, get_partner, now_iso, oid
 
 router = APIRouter(prefix="/api/fleuriste", tags=["fleuriste"])
 
@@ -40,6 +40,8 @@ def _public(d: dict) -> dict:
         "created_at": d["created_at"],
         "note": d.get("note", ""),
         "flowers": d["flowers"],
+        "to_id": d.get("to_id"),
+        "planted": d.get("planted"),
     }
 
 
@@ -49,9 +51,42 @@ async def list_bouquets(_: User = Depends(get_current_user)):
     return [_public(d) for d in docs]
 
 
+@router.get("/unplanted")
+async def unplanted(user: User = Depends(get_current_user)):
+    """Bouquet reçu qui n'a pas encore été planté (le plus ancien d'abord), pour la fenêtre d'accueil."""
+    d = await db.bouquets.find({"to_id": user.id, "planted": None}).sort("created_at", 1).to_list(1)
+    return _public(d[0]) if d else None
+
+
+class PlantIn(BaseModel):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
+@router.post("/{bouquet_id}/plant")
+async def plant(bouquet_id: str, body: PlantIn, user: User = Depends(get_current_user)):
+    d = await db.bouquets.find_one({"_id": oid(bouquet_id)})
+    if not d or d.get("to_id") != user.id:
+        raise HTTPException(404, "Bouquet introuvable")
+    if d.get("planted"):
+        raise HTTPException(400, "Ce bouquet est déjà planté")
+    await db.bouquets.update_one({"_id": d["_id"]}, {"$set": {"planted": {"x": body.x, "y": body.y}, "planted_at": now_iso()}})
+    return {"ok": True}
+
+
+@router.get("/garden")
+async def garden(_: User = Depends(get_current_user)):
+    """Bouquets plantés dans le jardin (visibles sur l'accueil des deux)."""
+    docs = await db.bouquets.find({"planted": {"$ne": None}}).sort("planted_at", 1).to_list(200)
+    return [{"id": str(d["_id"]), "flowers": d["flowers"], "x": d["planted"]["x"], "y": d["planted"]["y"]} for d in docs]
+
+
 @router.post("")
 async def create_bouquet(body: BouquetIn, user: User = Depends(get_current_user)):
+    partner = await get_partner(user)
     doc = {
+        "to_id": partner.id if partner else None,
+        "planted": None,  # {"x": 0..1, "y": 0..1} une fois planté dans le jardin par la personne qui le reçoit
         "author_id": user.id,
         "author_name": user.name,
         "created_at": now_iso(),

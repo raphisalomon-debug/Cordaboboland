@@ -134,3 +134,30 @@ export function BouquetView({ flowers, size }: { flowers: Flower[]; size: number
     </Svg>
   );
 }
+
+/** Bouquet planté dans le gazon : les fleurs sur leurs tiges, sans papier, avec un petit monticule de terre. */
+export function PlantView({ flowers, size }: { flowers: Flower[]; size: number }) {
+  const uid = useId().replace(/\W/g, "");
+  const k = flowers.length;
+  const scale = Math.max(0.6, 1.1 - 0.07 * k);
+  const spread = k === 1 ? 0 : Math.min(44, 10 + 9 * k);
+  const heads = flowers.map((_, i) => {
+    const a = k === 1 ? 0 : (-spread + (2 * spread * i) / (k - 1)) * (Math.PI / 180);
+    const r = k === 1 ? 150 : 150 - (i % 2) * 34;
+    return { x: 150 + r * Math.sin(a), y: 282 - r * Math.cos(a) };
+  });
+  return (
+    <Svg width={size} height={(size * 270) / 300} viewBox="0 30 300 270">
+      <Path d="M92 296 Q150 262 208 296 Z" fill="#B58B5E" stroke={INK} strokeWidth={2.4} strokeLinejoin="round" />
+      {heads.map((h, i) => (
+        <Path key={`s${i}`} d={`M150 284 Q${(150 + h.x) / 2} ${(284 + h.y) / 2 + 16} ${h.x} ${h.y + 20}`} stroke="#7F9468" strokeWidth={6} fill="none" strokeLinecap="round" />
+      ))}
+      <Path d="M120 290 q-18 -8 -24 -34 q22 6 30 30 Z M180 290 q18 -8 24 -34 q-22 6 -30 30 Z" fill="#A9C08C" stroke={INK} strokeWidth={2} strokeLinejoin="round" />
+      {heads.map((h, i) => (
+        <G key={`f${i}`} x={h.x} y={h.y} scale={scale * 1.15}>
+          <FlowerBody flower={flowers[i]} uid={`${uid}${i}`} />
+        </G>
+      ))}
+    </Svg>
+  );
+}

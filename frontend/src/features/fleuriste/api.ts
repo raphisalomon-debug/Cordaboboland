@@ -7,7 +7,8 @@ export type ShapeKey = "ronde" | "ovale" | "pointue" | "coeur" | "goutte";
 /** Points en coordonnées de pétale : u = position sur la largeur (-0.5..0.5), v = hauteur (0 = base, 1 = pointe). */
 export type Stroke = { color: string; width: number; points: [number, number][] };
 export type Flower = { shape: ShapeKey; petals: number; petal_color: string; center_color: string; drawing: Stroke[] };
-export type Bouquet = { id: string; author_id: string; author_name: string; created_at: string; note: string; flowers: Flower[] };
+export type Bouquet = { id: string; author_id: string; author_name: string; created_at: string; note: string; flowers: Flower[]; to_id?: string | null; planted?: { x: number; y: number } | null };
+export type GardenItem = { id: string; flowers: Flower[]; x: number; y: number };
 
 export const SHAPES: { key: ShapeKey; label: string }[] = [
   { key: "ronde", label: "Ronde" },
@@ -31,6 +32,24 @@ export const newFlower = (i = 0): Flower => ({
 
 const KEY = ["bouquets"];
 export const useBouquets = () => useQuery({ queryKey: KEY, queryFn: () => api<Bouquet[]>("/fleuriste") });
+
+/** Bouquet reçu qui attend d'être planté (affiché en grand à l'ouverture de l'app). */
+export const useUnplanted = () =>
+  useQuery({ queryKey: ["bouquet-unplanted"], queryFn: () => api<Bouquet | null>("/fleuriste/unplanted"), refetchInterval: 15000 });
+export const useGarden = () => useQuery({ queryKey: ["garden"], queryFn: () => api<GardenItem[]>("/fleuriste/garden") });
+
+export function usePlant() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; x: number; y: number }) =>
+      api(`/fleuriste/${v.id}/plant`, { method: "POST", body: { x: v.x, y: v.y } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bouquet-unplanted"] });
+      qc.invalidateQueries({ queryKey: ["garden"] });
+      qc.invalidateQueries({ queryKey: ["bouquets"] });
+    },
+  });
+}
 
 export function useBouquetActions() {
   const qc = useQueryClient();
