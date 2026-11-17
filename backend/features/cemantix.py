@@ -33,7 +33,7 @@ SOURCE_URL = "https://www.alucare.fr/cemantix-indice-mot-du-jour-et-solution/"
 TZ = ZoneInfo("Europe/Paris")
 # Repère de numérotation : le Cémantix n° 1700 était celui du 27 octobre 2026 (+1 par jour).
 ANCHOR_NUMBER, ANCHOR_DATE = 1700, date(2026, 10, 27)
-RETRY_SECONDS = 120  # on ne redemande pas la page à alucare plus souvent que ça
+RETRY_SECONDS = 60  # on ne redemande pas la page à alucare plus souvent que ça
 _last_try: dict[str, float] = {}
 
 
@@ -92,9 +92,11 @@ async def _fetch_page() -> str:
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
         "Accept-Language": "fr-FR,fr;q=0.9",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
     }
     async with httpx.AsyncClient(timeout=10, follow_redirects=True, headers=headers) as client:
-        r = await client.get(SOURCE_URL)
+        r = await client.get(SOURCE_URL, params={"t": int(time.time())})  # évite une copie en cache
         if r.status_code != 200:
             raise RuntimeError(f"alucare a répondu {r.status_code}")
         return r.text
@@ -117,7 +119,11 @@ async def solution_for(day: str) -> Optional[str]:
     number, word = parse_alucare(page)
     expected = puzzle_number(day)
     if number != expected:
-        logger.info("alucare : la page affiche le n° %s, on attend le n° %s (pas encore à jour)", number, expected)
+        txt = _text(page)
+        seen = sorted(set(re.findall(r"\b(17\d\d)\b", txt)))[:12]
+        modif = re.search(r"Modifi[ée] le[^|]{0,40}", txt)
+        logger.info("alucare : la page affiche le n° %s, on attend le n° %s (pas encore à jour). N° vus : %s ; %s",
+                    number, expected, seen, modif.group(0) if modif else "date de modification introuvable")
         return None
     if not word:
         logger.warning("alucare : n° %s trouvé mais pas la solution. Structure : %s", number, _masked(page))
