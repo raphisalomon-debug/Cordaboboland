@@ -100,7 +100,12 @@ export default function CemantixScreen() {
           ) : pendingMine ? (
             <View style={styles.doneRow} testID="cemantix-me-pending">
               <Feather name="clock" size={20} color={colors.muted} />
-              <Text style={styles.doneText}>Mot envoyé, en attente de vérification</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.doneText}>Mot envoyé, en attente de vérification</Text>
+                <Text style={styles.pendingHint}>
+                  {data.solution_ready ? "Vérification en cours…" : "La solution du jour n'est pas encore publiée : on réessaie tout seuls."}
+                </Text>
+              </View>
               <Text style={styles.undo} testID="cemantix-undo" onPress={() => undo.mutate()} suppressHighlighting>
                 Annuler
               </Text>
@@ -174,6 +179,7 @@ export default function CemantixScreen() {
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
   date: { fontFamily: fonts.hand, fontSize: 26, color: c.onSurface, textTransform: "capitalize", textAlign: "center" },
+  pendingHint: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
   number: { fontFamily: fonts.body, fontSize: 14, color: c.muted, textAlign: "center", marginTop: -10 },
   input: {
     fontFamily: fonts.body,

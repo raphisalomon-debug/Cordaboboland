@@ -166,7 +166,12 @@ async def game_check(raw_word: str) -> Optional[bool]:
                 pass
         if data.get("error"):
             return False  # mot inconnu du jeu : ce n'est pas la solution
-    logger.warning("jeu : réponse inattendue (clés : %s)", sorted(data.keys()) if isinstance(data, dict) else type(data).__name__)
+    if isinstance(data, dict):
+        # Format inconnu : on note seulement la forme (lettres masquées), jamais le contenu.
+        shape = {k: re.sub(r"[A-Za-zÀ-ÿ]", "x", str(v))[:40] + f" ({type(v).__name__})" for k, v in list(data.items())[:6]}
+        logger.warning("jeu : réponse inattendue, forme : %s", shape)
+    else:
+        logger.warning("jeu : réponse inattendue (%s)", type(data).__name__)
     return None
 
 
