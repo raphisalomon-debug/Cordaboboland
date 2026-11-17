@@ -107,3 +107,14 @@ async def delete_bouquet(bouquet_id: str, user: User = Depends(get_current_user)
         raise HTTPException(403, "Seul(e) l'auteur(e) peut retirer ce bouquet")
     await db.bouquets.delete_one({"_id": d["_id"]})
     return {"ok": True}
+
+
+async def backfill_recipients() -> None:
+    """Bouquets créés avant l'arrivée du « bouquet reçu » : ils n'avaient pas de destinataire.
+    On les adresse à l'autre personne, pour qu'elle les reçoive en grand puis les plante."""
+    users = await db.users.find({}).to_list(10)
+    ids = [str(u["_id"]) for u in users]
+    async for d in db.bouquets.find({"to_id": {"$exists": False}}):
+        others = [i for i in ids if i != d["author_id"]]
+        if len(others) == 1:
+            await db.bouquets.update_one({"_id": d["_id"]}, {"$set": {"to_id": others[0], "planted": None}})

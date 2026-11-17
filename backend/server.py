@@ -78,6 +78,7 @@ async def startup():
     app.state.index_task = asyncio.create_task(ensure_indexes())
     await seed_users()
     await houses.seed_houses()
+    await fleuriste.backfill_recipients()
 
 
 @app.on_event("shutdown")
