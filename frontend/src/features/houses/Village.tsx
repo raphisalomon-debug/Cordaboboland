@@ -123,9 +123,9 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove, g
             <StreetLamp key={i} x={l.x} y={l.y} lit={isNight} />
           ))}
           {garden.map((g) => {
-            const ps = Math.max(56, Math.min(78, size.w * 0.17));
+            const ps = Math.max(40, Math.min(58, size.w * 0.13));
             return (
-              <View key={g.id} pointerEvents="none" style={{ position: "absolute", left: g.x * size.w - ps / 2, top: g.y * size.h - ps * 0.88 }} testID={`planted-${g.id}`}>
+              <View key={g.id} pointerEvents="none" style={{ position: "absolute", left: g.x * size.w - ps / 2, top: g.y * size.h - ps / 2 }} testID={`planted-${g.id}`}>
                 <PlantView flowers={g.flowers} size={ps} />
               </View>
             );
