@@ -127,20 +127,62 @@ async def solution_for(day: str) -> Optional[str]:
     return word
 
 
+GAME_SCORE_URL = GAME_URL + "score"
+
+
+async def game_check(raw_word: str) -> Optional[bool]:
+    """Demande au jeu lui-même (comme le fait la page de Cémantix) si ce mot est la solution du jour.
+
+    True = bon mot, False = pas le bon mot (ou mot inconnu du jeu), None = impossible de savoir (réseau, format inattendu).
+    On ne garde rien du résultat, à part le verdict.
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        "Origin": GAME_URL.rstrip("/"),
+        "Referer": GAME_URL,
+        "Accept": "application/json",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True, headers=headers) as client:
+            r = await client.post(GAME_SCORE_URL, data={"word": raw_word})
+        data = r.json()
+    except Exception as exc:
+        logger.warning("jeu : vérification impossible (%s)", exc)
+        return None
+    if isinstance(data, dict):
+        if "percentile" in data or "score" in data:
+            pct, score = data.get("percentile"), data.get("score")
+            try:
+                if (pct is not None and int(pct) >= 1000) or (score is not None and float(score) >= 0.9999):
+                    return True
+                return False
+            except (TypeError, ValueError):
+                pass
+        if data.get("error"):
+            return False  # mot inconnu du jeu : ce n'est pas la solution
+    logger.warning("jeu : réponse inattendue (clés : %s)", sorted(data.keys()) if isinstance(data, dict) else type(data).__name__)
+    return None
+
+
+async def verdict(day: str, norm_word: str, raw_word: str) -> Optional[bool]:
+    """Bon mot ? True / False, ou None tant qu'aucune source ne peut répondre (alucare pas à jour, jeu injoignable)."""
+    solution = await solution_for(day)
+    if solution is not None:
+        return norm_word == solution
+    return await game_check(raw_word)
+
+
 # --------------------------------------------------------------------------
 # État de la course
 # --------------------------------------------------------------------------
 async def _resolve_pending(day: str) -> None:
-    """Vérifie les mots restés « en attente » dès que la solution du jour est connue."""
+    """Vérifie les mots restés « en attente » dès qu'une source (alucare ou le jeu) peut répondre."""
     pending = await db.cemantix_claims.find({"date": day, "status": "pending"}).to_list(10)
-    if not pending:
-        return
-    solution = await solution_for(day)
-    if solution is None:
-        return
     for c in pending:
-        status = "verified" if c.get("word") == solution else "rejected"
-        await db.cemantix_claims.update_one({"_id": c["_id"]}, {"$set": {"status": status}})
+        ok = await verdict(day, c.get("word", ""), c.get("raw") or c.get("word", ""))
+        if ok is None:
+            return
+        await db.cemantix_claims.update_one({"_id": c["_id"]}, {"$set": {"status": "verified" if ok else "rejected"}})
 
 
 def _public(claim: dict, rank: int, roles: dict) -> dict:
@@ -210,15 +252,16 @@ async def found(body: FoundIn, user: User = Depends(get_current_user)):
     if existing and existing.get("status") == "verified":
         return await _state(user)
 
-    solution = await solution_for(day)
-    if solution is not None and word != solution:
+    raw = re.sub(r"\s+", " ", body.word.strip().lower())[:60]
+    ok = await verdict(day, word, raw)
+    if ok is False:
         raise HTTPException(400, "Ce n'est pas le bon mot, cherche encore !")
-    status = "verified" if solution is not None else "pending"
+    status = "verified" if ok else "pending"
     keep_time = existing and existing.get("status") == "pending" and existing.get("word") == word
     found_at = existing["found_at"] if keep_time else now_iso()
     await db.cemantix_claims.update_one(
         {"date": day, "user_id": user.id},
-        {"$set": {"user_name": user.name, "found_at": found_at, "word": word, "status": status}},
+        {"$set": {"user_name": user.name, "found_at": found_at, "word": word, "raw": raw, "status": status}},
         upsert=True,
     )
     return await _state(user)
