@@ -101,7 +101,10 @@ export async function pickAndUploadPhoto(onDenied: () => void): Promise<{ path: 
     headers: authHeaders(),
     files: { file: { uri: asset.uri, name: asset.fileName ?? "photo.jpg", mimeType: asset.mimeType ?? "image/jpeg" } },
   });
-  if (!r.ok) throw new Error("Envoi de la photo impossible");
+  if (!r.ok) {
+    const d = await r.json().catch(() => null);
+    throw new Error(d?.detail && typeof d.detail === "string" ? d.detail : `Envoi de la photo impossible (${r.status})`);
+  }
   const data = (await r.json()) as { path: string };
   return { path: data.path, preview: asset.uri };
 }

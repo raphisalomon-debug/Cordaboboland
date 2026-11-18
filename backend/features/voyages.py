@@ -15,6 +15,9 @@ from pydantic import BaseModel, Field
 
 from core import User, db, get_current_user, now_iso, oid, put_file
 
+import logging
+
+log = logging.getLogger("voyages")
 router = APIRouter(prefix="/api/voyages", tags=["voyages"])
 
 CODE_RE = re.compile(r"^[A-Z]{2}(-[A-Z]{1,2})?$|^X-[A-Za-z]{1,40}$")
@@ -150,6 +153,13 @@ async def clear_trip(_: User = Depends(get_current_user)):
 async def upload_photo(file: UploadFile = File(...), user: User = Depends(get_current_user)):
     from PIL import Image, ImageOps  # import tardif : seulement utile ici
 
+    try:  # photos HEIC/HEIF des iPhone
+        from pillow_heif import register_heif_opener
+
+        register_heif_opener()
+    except Exception:
+        pass
+
     raw = await file.read()
     if len(raw) > 15 * 1024 * 1024:
         raise HTTPException(400, "Photo trop lourde (15 Mo max)")
@@ -159,7 +169,8 @@ async def upload_photo(file: UploadFile = File(...), user: User = Depends(get_cu
         img.thumbnail((1400, 1400))
         out = io.BytesIO()
         img.save(out, "JPEG", quality=80, optimize=True)
-    except Exception:
+    except Exception as e:
+        log.warning("photo illisible (%s, %d octets) : %s", file.content_type, len(raw), e)
         raise HTTPException(400, "Ce fichier n'est pas une photo lisible")
     path = await put_file(user.id, out.getvalue(), "image/jpeg", "jpg")
     return {"path": path}

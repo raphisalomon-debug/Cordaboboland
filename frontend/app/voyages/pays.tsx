@@ -83,7 +83,7 @@ export default function PaysScreen() {
       const r = await pickAndUploadPhoto(() => toast("Accès aux photos refusé"));
       if (r) setPhoto(r);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Envoi impossible");
+      toast(e instanceof Error ? e.message : "Envoi impossible", );
     } finally {
       setUploading(false);
     }
@@ -268,7 +268,7 @@ export default function PaysScreen() {
 
       {/* Nouveau souvenir */}
       <Sheet visible={entryOpen} onClose={() => setEntryOpen(false)} title="Nouveau souvenir" testID="entry-sheet">
-        <ScrollView style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 12 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={{ gap: 12 }} keyboardShouldPersistTaps="handled">
           {photo ? (
             <Pressable onPress={choosePhoto}>
               <Image source={{ uri: photo.preview }} style={styles.photoPreview} contentFit="cover" />
@@ -286,8 +286,8 @@ export default function PaysScreen() {
             variant="secondary"
             onPress={() => { setEntryOpen(false); setPinOpen(true); }}
           />
-          <SketchButton testID="entry-save" label="Enregistrer le souvenir" onPress={saveEntry} loading={a.addEntry.isPending} />
         </ScrollView>
+        <SketchButton testID="entry-save" label="Enregistrer le souvenir" onPress={saveEntry} loading={a.addEntry.isPending} disabled={uploading} style={{ marginTop: 12 }} />
       </Sheet>
 
       {/* Poser l'épingle */}
