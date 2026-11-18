@@ -70,7 +70,10 @@ function AppStack() {
           <Stack.Screen name="librairie/[id]" />
           <Stack.Screen name="lecture" />
           <Stack.Screen name="cemantix" />
-          <Stack.Screen name="voyages" />
+          <Stack.Screen name="voyages/index" />
+          <Stack.Screen name="voyages/pays" />
+          <Stack.Screen name="voyages/passeport" />
+          <Stack.Screen name="voyages/roue" />
           <Stack.Screen name="fleuriste/index" />
           <Stack.Screen name="fleuriste/creer" />
           <Stack.Protected guard={user?.role === "admin"}>

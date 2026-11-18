@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Paper } from "@/src/components/Paper";
 import { Loading, ScreenHeader } from "@/src/components/ui";
+import { TravelTrophies } from "@/src/features/voyages/TravelTrophies";
+import { useOverview } from "@/src/features/voyages/api";
 import { GoalsTabs } from "@/src/features/goals/GoalsTabs";
 import { useTrophies } from "@/src/features/goals/api";
 import { TrophyIcon } from "@/src/features/goals/TrophyIcon";
@@ -19,6 +21,7 @@ export default function TropheesScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { data, isLoading, refetch, isRefetching } = useTrophies();
+  const { data: travel } = useOverview();
   const items = data ?? [];
   const shelves: (typeof items)[] = [];
   for (let i = 0; i < items.length; i += PER_SHELF) shelves.push(items.slice(i, i + PER_SHELF));
@@ -62,6 +65,7 @@ export default function TropheesScreen() {
               </View>
             </View>
           ))}
+          {travel && <TravelTrophies overview={travel} />}
         </ScrollView>
       )}
     </View>
