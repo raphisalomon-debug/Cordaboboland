@@ -20,6 +20,8 @@ import { HouseImage } from "@/src/features/houses/HouseImage";
 import { fonts, makeStyles, NightMode, setNightMode, useNightMode, useTheme } from "@/src/theme";
 import { uploadForm } from "@/src/utils/upload";
 
+const HOUSE_COLORS = ["#F6C6C6", "#F8D8E4", "#FAEDCD", "#F2D7B6", "#CCD5AE", "#D6E5D8", "#C9DDF0", "#E3D3EE", "#E8826B", "#E9C46A", "#8FB07A", "#7FB3D5"];
+
 export default function ReglagesScreen() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
@@ -246,6 +248,19 @@ function HouseSettings({ house, onPermissionBlocked }: { house: House; onPermiss
           }
         />
       )}
+      <Text style={styles.cardSub}>Couleur de la maison</Text>
+      <View style={styles.swatches}>
+        {HOUSE_COLORS.map((col) => (
+          <Pressable
+            key={col}
+            testID={`house-color-${house.key}-${col.slice(1)}`}
+            onPress={() => update.mutate({ color: col })}
+            style={[styles.swatch, { backgroundColor: col }, house.color.toLowerCase() === col.toLowerCase() && styles.swatchOn]}
+          >
+            {house.color.toLowerCase() === col.toLowerCase() && <Feather name="check" size={14} color="#2B2824" />}
+          </Pressable>
+        ))}
+      </View>
       <View style={styles.row}>
         <SketchButton
           label="Changer l'image"
@@ -301,6 +316,9 @@ const useStyles = makeStyles((c) => ({
   cardTitle: { fontFamily: fonts.hand, fontSize: 24, color: c.onSurfaceSecondary },
   cardSub: { fontFamily: fonts.body, fontSize: 12, color: c.muted },
   row: { flexDirection: "row", gap: 10, alignItems: "center" },
+  swatches: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  swatch: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, borderColor: c.borderStrong, alignItems: "center", justifyContent: "center" },
+  swatchOn: { borderWidth: 3, borderColor: c.onSurface },
   reset: {
     width: 48,
     height: 48,

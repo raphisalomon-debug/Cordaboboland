@@ -83,7 +83,7 @@ export default function Home() {
         {LOGO_IMAGE && <BlinkingOtter size={46} testID="home-logo" tappable />}
         <View style={{ flex: 1 }}>
           <Text style={styles.title} testID="home-title" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-            Nos petites maisons
+            Cordaboboland
           </Text>
           <Text style={styles.hello} testID="home-greeting">
             {isNight ? "Bonne nuit" : "Coucou"} {user?.name}

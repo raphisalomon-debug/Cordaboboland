@@ -51,7 +51,7 @@ export default function LoginScreen() {
           ) : (
             <HouseArt size={110} color="#F6C6C6" lit={false} />
           )}
-          <Text style={styles.title}>Nos petites maisons</Text>
+          <Text style={styles.title}>Cordaboboland</Text>
           <Text style={styles.subtitle}>Rien que pour nous deux</Text>
         </View>
         <View style={styles.form}>

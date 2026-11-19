@@ -1,4 +1,5 @@
 """Maisons de l'accueil (config modulaire) + images (stockées dans MongoDB)."""
+import re
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -28,6 +29,7 @@ class HouseUpdate(BaseModel):
     name: Optional[str] = None
     target: Optional[str] = None
     visible: Optional[bool] = None
+    color: Optional[str] = None
     x: Optional[float] = None
     y: Optional[float] = None
 
@@ -85,6 +87,8 @@ async def update_house(key: str, body: HouseUpdate, _: User = Depends(require_ad
     for k in ("x", "y"):
         if k in changes:
             changes[k] = _clamp(changes[k])
+    if "color" in changes and not re.fullmatch(r"#[0-9A-Fa-f]{6}", changes["color"]):
+        raise HTTPException(400, "Couleur invalide")
     if "name" in changes and not changes["name"].strip():
         raise HTTPException(400, "Le nom ne peut pas être vide")
     res = await db.houses.find_one_and_update({"key": key}, {"$set": changes}, return_document=True)

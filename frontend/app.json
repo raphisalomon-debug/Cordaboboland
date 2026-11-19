@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Nos petites maisons",
+    "name": "Cordaboboland",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -25,7 +25,7 @@
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png",
-      "name": "Nos petites maisons",
+      "name": "Cordaboboland",
       "shortName": "Petites maisons",
       "themeColor": "#F4F0E6",
       "backgroundColor": "#F4F0E6"

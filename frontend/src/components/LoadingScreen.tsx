@@ -39,7 +39,7 @@ export function LoadingScreen({ fontsReady = true, stage }: { fontsReady?: boole
         <HouseArt size={120} color="#FAEDCD" lit={false} />
       )}
       {fontsReady && (
-        <Text style={{ fontFamily: "Caveat-Bold", fontSize: 36, color: colors.onSurface }}>Nos petites maisons</Text>
+        <Text style={{ fontFamily: "Caveat-Bold", fontSize: 36, color: colors.onSurface }}>Cordaboboland</Text>
       )}
       <ActivityIndicator color={colors.brandPrimary} />
       {slow && (
