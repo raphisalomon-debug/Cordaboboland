@@ -1,7 +1,7 @@
 // The village: houses placed on the sheet, little paths between them,
 // street lamps along the paths (lit at night). In `editable` mode each
 // house can be dragged with the finger.
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, LayoutChangeEvent, PanResponder, Pressable, Text, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
@@ -131,6 +131,7 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove, g
             );
           })}
           {houses.some((h) => h.key === BOAT_KEY) && <Lake w={size.w} h={size.h} />}
+          {houses.some((h) => h.key === BOAT_KEY) && <LakeOtter w={size.w} h={size.h} />}
           {houses.map((h) => (
             <HouseSpot
               key={h.key}
@@ -171,6 +172,58 @@ export function Village({ houses, editable, badges = {}, onPressHouse, onMove, g
 }
 
 /** Un coin de lac en bas à droite : on n'en voit qu'un bout, le reste sort de la feuille. */
+/** Une petite loutre qui se baigne dans le lac, sort de temps en temps, et plonge si on la touche. */
+function LakeOtter({ w, h }: { w: number; h: number }) {
+  const rise = useRef(new Animated.Value(0)).current; // 0 = sous l'eau, 1 = sortie
+  const [phase, setPhase] = useState<"hidden" | "up" | "scared">("hidden");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
+  const later = (fn: () => void, ms: number) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(fn, ms);
+  };
+  const dive = (pauseMs: number) => {
+    Animated.timing(rise, { toValue: 0, duration: 350, useNativeDriver: false }).start();
+    setPhase("hidden");
+    later(surface, pauseMs);
+  };
+  const surface = () => {
+    setPhase("up");
+    Animated.timing(rise, { toValue: 1, duration: 500, useNativeDriver: false }).start();
+    later(() => dive(5000 + Math.random() * 7000), 4000 + Math.random() * 4000);
+  };
+  useEffect(() => {
+    later(surface, 2500);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onTouch = () => {
+    if (phaseRef.current !== "up") return;
+    setPhase("scared");
+    later(() => dive(14000 + Math.random() * 8000), 650);
+  };
+
+  const left = w * 0.34 + w * 0.66 * 0.3;
+  const top = h - h * 0.2 * 0.5;
+  const dy = rise.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+  return (
+    <Animated.View
+      style={{ position: "absolute", left, top, opacity: rise, transform: [{ translateY: dy }] }}
+      pointerEvents={phase === "up" ? "auto" : "none"}
+    >
+      <Pressable onPress={onTouch} hitSlop={14} testID="lake-otter">
+        {phase === "scared" && <Text style={{ position: "absolute", top: -14, left: 6, fontSize: 13 }}>❗</Text>}
+        <Text style={{ fontSize: 22 }}>🦦</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 function Lake({ w, h }: { w: number; h: number }) {
   const { colors } = useTheme();
   const { isNight } = useNightMode();
