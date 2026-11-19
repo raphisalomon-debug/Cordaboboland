@@ -2,19 +2,24 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+import io
+import re
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from core import BaseDocument, User, db, get_current_user, now_iso, oid, require_admin
+from core import BaseDocument, User, db, get_current_user, now_iso, oid, put_file, require_admin
 
 router = APIRouter(prefix="/api", tags=["books"])
 MAX_CONTENT = 100_000
+COVER_RE = re.compile(r"^uploads/[\w-]+/[\w.-]+$")
 
 
 class Book(BaseDocument):
     title: str
     color: str = "#F8D8E4"
     author_name: str
+    cover_path: Optional[str] = None  # photo de la couverture (facultative)
     created_at: str
     updated_at: str
 
@@ -30,11 +35,14 @@ class Chapter(BaseDocument):
 class BookIn(BaseModel):
     name: str  # same shape as the folder sheet: name + color
     color: str = "#F8D8E4"
+    cover_path: Optional[str] = None
 
 
 class BookPatch(BaseModel):
     name: Optional[str] = None
     color: Optional[str] = None
+    cover_path: Optional[str] = None
+    remove_cover: bool = False
 
 
 class ChapterIn(BaseModel):
@@ -66,6 +74,35 @@ def _check_chapter(title: Optional[str], content: Optional[str]) -> None:
 
 
 # ------------------------------ Books ------------------------------------
+@router.post("/books/cover")
+async def upload_cover(file: UploadFile = File(...), user: User = Depends(require_admin)):
+    """Photo de couverture : réduite (900 px) avant d'être gardée. Accepte aussi les HEIC d'iPhone."""
+    from PIL import Image, ImageOps
+
+    try:
+        from pillow_heif import register_heif_opener
+
+        register_heif_opener()
+    except Exception:
+        pass
+    raw = await file.read()
+    if len(raw) > 15 * 1024 * 1024:
+        raise HTTPException(400, "Photo trop lourde (15 Mo max)")
+    try:
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
+        img.thumbnail((900, 1300))
+        out = io.BytesIO()
+        img.save(out, "JPEG", quality=82, optimize=True)
+    except Exception:
+        raise HTTPException(400, "Ce fichier n'est pas une photo lisible")
+    return {"path": await put_file(user.id, out.getvalue(), "image/jpeg", "jpg")}
+
+
+def _check_cover(path: Optional[str]) -> None:
+    if path and not COVER_RE.match(path):
+        raise HTTPException(400, "Photo invalide")
+
+
 @router.get("/books")
 async def list_books(_: User = Depends(get_current_user)):
     docs = await db.books.find().sort("created_at", 1).to_list(500)
@@ -90,8 +127,9 @@ async def get_book(book_id: str, _: User = Depends(get_current_user)):
 async def create_book(body: BookIn, user: User = Depends(require_admin)):
     if not body.name.strip():
         raise HTTPException(400, "Donne un titre au livre")
+    _check_cover(body.cover_path)
     now = now_iso()
-    book = Book(title=body.name.strip()[:80], color=body.color, author_name=user.name, created_at=now, updated_at=now)
+    book = Book(title=body.name.strip()[:80], color=body.color, author_name=user.name, cover_path=body.cover_path, created_at=now, updated_at=now)
     res = await db.books.insert_one(book.to_mongo())
     book.id = str(res.inserted_id)
     return {**book.model_dump(), "chapter_count": 0}
@@ -106,6 +144,12 @@ async def update_book(book_id: str, body: BookPatch, _: User = Depends(require_a
         changes["title"] = body.name.strip()[:80]
     if body.color is not None:
         changes["color"] = body.color
+    _check_cover(body.cover_path)
+    if body.cover_path:
+        changes["cover_path"] = body.cover_path
+    elif body.remove_cover:
+        changes["cover_path"] = None
+    changes["updated_at"] = now_iso()
     res = await db.books.find_one_and_update({"_id": oid(book_id)}, {"$set": changes}, return_document=True)
     if not res:
         raise HTTPException(404, "Livre introuvable")

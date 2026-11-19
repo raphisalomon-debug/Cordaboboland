@@ -12,7 +12,7 @@ import { Paper } from "@/src/components/Paper";
 import { Sheet } from "@/src/components/Sheet";
 import { useToast } from "@/src/components/Toast";
 import { IconButton, Loading, ScreenHeader, SketchButton } from "@/src/components/ui";
-import { BOOK_SHEET_LABELS, progressKey, useBook } from "@/src/features/books/api";
+import { BOOK_SHEET_LABELS, pickCover, progressKey, useBook } from "@/src/features/books/api";
 import { BookCover } from "@/src/features/books/BookCover";
 import { FolderSheet } from "@/src/features/verses/FolderSheet";
 import { fonts, makeStyles, useTheme } from "@/src/theme";
@@ -34,6 +34,7 @@ export default function BookScreen() {
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
+  const [coverBusy, setCoverBusy] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -52,6 +53,22 @@ export default function BookScreen() {
       toast(e.message);
     },
   });
+
+  const setCover = async (source: "camera" | "library") => {
+    setCoverBusy(true);
+    try {
+      const path = await pickCover(source, () => toast(source === "camera" ? "Accès à l'appareil photo refusé" : "Accès aux photos refusé"));
+      if (path) {
+        await call.mutateAsync({ method: "PATCH", body: { cover_path: path } });
+        setMenu(false);
+        toast("Couverture mise à jour 📖");
+      }
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Envoi impossible");
+    } finally {
+      setCoverBusy(false);
+    }
+  };
 
   const chapters = book?.chapters ?? [];
   const resumeAt = progress !== null && progress < chapters.length ? progress : 0;
@@ -130,6 +147,11 @@ export default function BookScreen() {
       )}
 
       <Sheet visible={menu} onClose={() => setMenu(false)} title="Le livre" testID="book-menu-sheet">
+        <SketchButton label="Photographier la couverture" icon="camera" testID="book-cover-camera" loading={coverBusy} onPress={() => setCover("camera")} />
+        <SketchButton label="Choisir une photo" icon="image" variant="secondary" testID="book-cover-library" disabled={coverBusy} onPress={() => setCover("library")} />
+        {!!book?.cover_path && (
+          <SketchButton label="Retirer la photo" icon="x" variant="ghost" testID="book-cover-remove" onPress={() => call.mutate({ method: "PATCH", body: { remove_cover: true } }, { onSuccess: () => { setMenu(false); toast("Photo retirée"); } })} />
+        )}
         <SketchButton label="Titre / couleur" icon="edit-2" variant="secondary" testID="book-edit-button" onPress={() => { setMenu(false); setError(""); setEditOpen(true); }} />
         <SketchButton label="Supprimer le livre" icon="trash-2" variant="ghost" testID="book-delete-button" onPress={() => { setMenu(false); setConfirmDelete(true); }} />
       </Sheet>
