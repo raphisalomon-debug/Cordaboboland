@@ -64,7 +64,6 @@ export function achievements(o: Overview): Achievement[] {
     A("c3", "🧭", "Trois continents", "Visiter 3 continents", s.continents, 3),
     A("c5", "🗺️", "Cinq continents", "Visiter 5 continents", s.continents, 5),
     A("dream", "💭", "Rêveurs", "5 pays sur la liste d'envies", s.wished.length, 5),
-    A("both", "✨", "Même envie", "Un pays que vous voulez tous les deux", sharedWishes(o).length, 1),
     A("memory", "📸", "Premier souvenir", "Un souvenir ajouté", s.memories, 1),
     A("album", "📚", "Album de voyage", "10 souvenirs ajoutés", s.memories, 10),
   ];
