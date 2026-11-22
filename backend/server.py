@@ -13,6 +13,7 @@ from contextlib import suppress
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from pymongo import ASCENDING, DESCENDING, IndexModel
 from starlette.middleware.cors import CORSMiddleware
@@ -75,6 +76,7 @@ async def health():
 for r in FEATURE_ROUTERS:
     app.include_router(r)
 
+app.add_middleware(GZipMiddleware, minimum_size=1024)  # le site pèse ~3 Mo : compressé, ~4 fois moins à télécharger
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
