@@ -1,4 +1,4 @@
-// Cémantix : course quotidienne. Le premier à trouver le mot du jour est roi / reine du jour.
+// Cémantix : course quotidienne. Celui qui trouve le mot du jour en le moins d'essais est roi / reine du jour.
 import { Feather } from "@react-native-vector-icons/feather";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
@@ -30,20 +30,26 @@ export default function CemantixScreen() {
   const winner = data?.winner ?? null;
   const iWon = !!winner && winner.user_id === user?.id;
   const myClaim = data?.claims.find((c) => c.user_id === user?.id);
+  const loser = data?.claims.find((c) => c.rank === 2) ?? null;
 
   const [word, setWord] = useState("");
+  const [tries, setTries] = useState("");
   const status = data?.me_status ?? null;
   const pendingMine = status === "pending";
   const verifiedMine = status === "verified";
 
   const declare = () => {
     if (!word.trim()) return toast("Écris d'abord le mot que tu as trouvé");
-    found.mutate(word, {
+    const n = parseInt(tries, 10);
+    if (!Number.isInteger(n) || n < 1) return toast("Indique en combien d'essais tu as trouvé");
+    found.mutate({ word, tries: n }, {
       onSuccess: (s) => {
         setWord("");
+        setTries("");
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (s.me_status === "pending") toast("Mot envoyé, il sera vérifié dès que la solution du jour est publiée");
-        else toast(s.winner?.user_id === user?.id ? "Bon mot, tu es le premier ! 👑" : "Bon mot, bien joué !");
+        else if (!s.complete) toast("Bon mot, bien joué ! On attend l'autre pour le résultat");
+        else toast(s.winner?.user_id === user?.id ? "Bon mot, et tu as gagné ! 👑" : "Bon mot, bien joué !");
       },
       onError: (e: Error) => {
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -72,12 +78,18 @@ export default function CemantixScreen() {
                 <Text style={styles.crown}>👑</Text>
                 <Text style={styles.crownRole}>{crownTitle(winner.role)}</Text>
                 <Text style={styles.crownName}>{winner.name}</Text>
-                <Text style={styles.crownTime}>a trouvé à {hour(winner.found_at)}</Text>
+                <Text style={styles.crownTime}>
+                  {!data.complete
+                    ? "pour l'instant : l'autre n'a pas encore répondu"
+                    : data.tie
+                      ? `à égalité (${winner.tries} essais), mais il a répondu le premier`
+                      : `${winner.name} a battu ${loser?.name} : ${winner.tries} essais contre ${loser?.tries}`}
+                </Text>
               </>
             ) : (
               <>
                 <Text style={styles.crownEmpty}>Personne n'a encore trouvé…</Text>
-                <Text style={styles.crownHint}>Le premier à trouver le mot devient roi / reine du jour.</Text>
+                <Text style={styles.crownHint}>Celui qui trouve en le moins d'essais devient roi / reine du jour.</Text>
               </>
             )}
           </View>
@@ -94,7 +106,11 @@ export default function CemantixScreen() {
             <View style={styles.doneRow} testID="cemantix-me-found">
               <Feather name="check-circle" size={20} color={colors.success} />
               <Text style={styles.doneText}>
-                {iWon ? "Tu as gagné aujourd'hui !" : `Mot vérifié, trouvé à ${hour(myClaim!.found_at)}`}
+                {!data.complete
+                  ? "Mot vérifié ! On attend l'autre pour le résultat"
+                  : iWon
+                    ? "Tu as gagné aujourd'hui !"
+                    : "Mot vérifié, l'autre a été plus fort aujourd'hui"}
               </Text>
             </View>
           ) : pendingMine ? (
@@ -112,6 +128,16 @@ export default function CemantixScreen() {
             </View>
           ) : (
             <>
+              <TextInput
+                testID="cemantix-tries-input"
+                style={styles.input}
+                value={tries}
+                onChangeText={(t) => setTries(t.replace(/[^0-9]/g, "").slice(0, 4))}
+                placeholder="Nombre d'essais pour y arriver"
+                placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+                returnKeyType="next"
+              />
               <TextInput
                 testID="cemantix-word-input"
                 style={styles.input}
@@ -147,7 +173,9 @@ export default function CemantixScreen() {
                   </Text>
                   <Text style={styles.rowStatus}>
                     {claim
-                      ? `a trouvé à ${hour(claim.found_at)}`
+                      ? data.complete && claim.tries
+                        ? `a trouvé en ${claim.tries} essai${claim.tries > 1 ? "s" : ""}`
+                        : `a trouvé à ${hour(claim.found_at)}`
                       : data.pending.some((p) => p.user_id === s.user_id)
                         ? "a envoyé un mot, à vérifier…"
                         : "cherche encore…"}
@@ -167,8 +195,8 @@ export default function CemantixScreen() {
             ))}
           </View>
           <Text style={styles.footnote}>
-            Le mot change chaque nuit à minuit. Tape le mot trouvé : il est comparé à la solution du jour d'Alucare, et
-            c'est l'heure d'envoi du bon mot qui compte.
+            Le mot change chaque nuit à minuit. Tape le mot trouvé et ton nombre d'essais : le mot est comparé à la
+            solution du jour d'Alucare. Le moins d'essais gagne ; si un seul a répondu, le point est pour lui.
           </Text>
         </ScrollView>
       )}

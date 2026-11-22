@@ -1,8 +1,9 @@
 """Cémantix : course quotidienne à deux, avec vérification du mot.
 
 Chacun joue sur cemantix.certitudes.org, puis tape dans l'app le mot qu'il a trouvé. L'app compare
-avec la solution du jour publiée sur alucare.fr. Le premier à avoir envoyé le BON mot dans la journée
-est roi / reine du jour (c'est l'heure d'envoi qui compte).
+avec la solution du jour publiée sur alucare.fr, et le nombre d'essais qu'il lui a fallu. Celui qui a
+trouvé en le MOINS d'essais est roi / reine du jour. À égalité d'essais, le premier envoyé gagne. Si un seul
+des deux a répondu, le point est pour lui.
 
 Garde-fous :
 - on ne juge un mot que si la page alucare est bien celle du jour (même numéro de Cémantix) ;
@@ -33,6 +34,9 @@ SOURCE_URL = "https://www.alucare.fr/cemantix-indice-mot-du-jour-et-solution/"
 TZ = ZoneInfo("Europe/Paris")
 # Repère de numérotation : le Cémantix n° 1700 était celui du 27 octobre 2026 (+1 par jour).
 ANCHOR_NUMBER, ANCHOR_DATE = 1700, date(2026, 10, 27)
+# Les couronnes ne comptent qu'à partir de ce jour (remise à zéro : nouvelle règle « moins d'essais »).
+# Les anciennes déclarations restent en base, elles ne sont simplement plus comptées.
+WINS_FROM = "2026-11-23"
 RETRY_SECONDS = 60  # on ne redemande pas la page à alucare plus souvent que ça
 _last_try: dict[str, float] = {}
 
@@ -196,13 +200,23 @@ async def _resolve_pending(day: str) -> None:
         await db.cemantix_claims.update_one({"_id": c["_id"]}, {"$set": {"status": "verified" if ok else "rejected"}})
 
 
-def _public(claim: dict, rank: int, roles: dict) -> dict:
+NO_TRIES = 10**9  # anciennes déclarations, sans nombre d'essais
+
+
+def _rank_key(claim: dict) -> tuple:
+    """Moins d'essais d'abord ; à égalité, le premier envoyé."""
+    return (claim.get("tries") or NO_TRIES, claim["found_at"])
+
+
+def _public(claim: dict, rank: int, roles: dict, show_tries: bool) -> dict:
     return {
         "user_id": claim["user_id"],
         "name": claim["user_name"],
         "role": roles.get(claim["user_id"], "partner"),
         "found_at": claim["found_at"],
         "rank": rank,
+        # Le nombre d'essais de l'autre n'est dévoilé que quand les deux ont répondu.
+        "tries": claim.get("tries") if show_tries else None,
     }
 
 
@@ -219,11 +233,16 @@ async def _state(user: User) -> dict:
         if c.get("status") == "verified":
             by_date.setdefault(c["date"], []).append(c)
     wins: dict[str, int] = {}
-    for day_claims in by_date.values():
-        first = min(day_claims, key=lambda c: c["found_at"])
+    for day, day_claims in by_date.items():
+        if day < WINS_FROM:
+            continue
+        first = min(day_claims, key=_rank_key)
         wins[first["user_id"]] = wins.get(first["user_id"], 0) + 1
 
-    ranked = [_public(c, i + 1, roles) for i, c in enumerate(sorted(by_date.get(today, []), key=lambda c: c["found_at"]))]
+    todays_verified = sorted(by_date.get(today, []), key=_rank_key)
+    complete = len({c["user_id"] for c in todays_verified}) >= 2
+    ranked = [_public(c, i + 1, roles, complete) for i, c in enumerate(todays_verified)]
+    tie = complete and ranked[0]["tries"] is not None and ranked[0]["tries"] == ranked[1]["tries"]
     todays = [c for c in claims if c["date"] == today]
     mine = next((c for c in todays if c["user_id"] == user.id), None)
     return {
@@ -232,6 +251,8 @@ async def _state(user: User) -> dict:
         "link": GAME_URL,
         "claims": ranked,
         "winner": ranked[0] if ranked else None,
+        "complete": complete,  # les deux ont répondu : le résultat est définitif
+        "tie": tie,  # même nombre d'essais : départagés par l'heure d'envoi
         "me_status": mine.get("status") if mine else None,  # None | pending | verified | rejected
         "pending": [{"user_id": c["user_id"], "name": c["user_name"]} for c in todays if c.get("status") == "pending"],
         "solution_ready": bool(await db.cemantix_solutions.find_one({"date": today})),
@@ -250,6 +271,7 @@ async def today(user: User = Depends(get_current_user)):
 
 class FoundIn(BaseModel):
     word: str
+    tries: int
 
 
 @router.post("/found")
@@ -258,6 +280,8 @@ async def found(body: FoundIn, user: User = Depends(get_current_user)):
     word = norm(body.word)
     if len(word) < 2:
         raise HTTPException(400, "Écris le mot que tu as trouvé")
+    if not 1 <= body.tries <= 9999:
+        raise HTTPException(400, "Indique ton nombre d'essais (entre 1 et 9999)")
     day = _today()
     existing = await db.cemantix_claims.find_one({"date": day, "user_id": user.id})
     if existing and existing.get("status") == "verified":
@@ -272,7 +296,7 @@ async def found(body: FoundIn, user: User = Depends(get_current_user)):
     found_at = existing["found_at"] if keep_time else now_iso()
     await db.cemantix_claims.update_one(
         {"date": day, "user_id": user.id},
-        {"$set": {"user_name": user.name, "found_at": found_at, "word": word, "raw": raw, "status": status}},
+        {"$set": {"user_name": user.name, "found_at": found_at, "word": word, "raw": raw, "tries": body.tries, "status": status}},
         upsert=True,
     )
     return await _state(user)
@@ -280,6 +304,6 @@ async def found(body: FoundIn, user: User = Depends(get_current_user)):
 
 @router.delete("/found")
 async def undo(user: User = Depends(get_current_user)):
-    """Annule sa propre déclaration du jour."""
-    await db.cemantix_claims.delete_one({"date": _today(), "user_id": user.id})
+    """Annule sa déclaration du jour tant qu'elle n'est pas vérifiée (ensuite le résultat est figé)."""
+    await db.cemantix_claims.delete_one({"date": _today(), "user_id": user.id, "status": {"$ne": "verified"}})
     return await _state(user)
