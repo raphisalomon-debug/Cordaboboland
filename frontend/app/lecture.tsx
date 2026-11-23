@@ -2,7 +2,10 @@
 import { Feather } from "@react-native-vector-icons/feather";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
+import { Image } from "expo-image";
 import { Pressable, ScrollView, Text, View } from "react-native";
+
+import { fileSource } from "@/src/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Paper } from "@/src/components/Paper";
@@ -45,6 +48,9 @@ export default function LectureScreen() {
             <Text style={styles.title} testID="reader-chapter-title">
               {chapter.title}
             </Text>
+            {(chapter.photos ?? []).map((path) => (
+              <Image key={path} source={fileSource(path)} style={styles.photo} contentFit="cover" />
+            ))}
             <Text style={styles.content} testID="reader-content" selectable>
               {chapter.content || "(page blanche)"}
             </Text>
@@ -82,6 +88,7 @@ const useStyles = makeStyles((c) => ({
   kicker: { fontFamily: fonts.bodyBold, fontSize: 12, color: c.muted, textTransform: "uppercase", letterSpacing: 1, marginTop: 8 },
   title: { fontFamily: fonts.hand, fontSize: 36, lineHeight: 40, color: c.onSurface, marginBottom: 12 },
   content: { fontFamily: fonts.body, fontSize: 17, lineHeight: 32, color: c.onSurface },
+  photo: { width: "100%", aspectRatio: 4 / 3, borderRadius: 14, marginBottom: 14 },
   end: { fontFamily: fonts.hand, fontSize: 26, color: c.muted, textAlign: "center", marginTop: 24 },
   missing: { fontFamily: fonts.body, fontSize: 15, color: c.muted, textAlign: "center", marginTop: 40 },
   bar: {

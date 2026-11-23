@@ -2,21 +2,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { Feather } from "@react-native-vector-icons/feather";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { api } from "@/src/api";
+import { api, fileSource } from "@/src/api";
 import { Paper } from "@/src/components/Paper";
 import { Sheet } from "@/src/components/Sheet";
 import { useToast } from "@/src/components/Toast";
 import { Field, ScreenHeader, SketchButton } from "@/src/components/ui";
-import { useBook } from "@/src/features/books/api";
-import { fonts, makeStyles } from "@/src/theme";
+import { pickCover, useBook } from "@/src/features/books/api";
+import { fonts, makeStyles, useTheme } from "@/src/theme";
 
 export default function EcrireScreen() {
   const { book: bookId, chapter: chapterId } = useLocalSearchParams<{ book: string; chapter?: string }>();
   const styles = useStyles();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
@@ -25,6 +28,8 @@ export default function EcrireScreen() {
   const existing = book?.chapters?.find((c) => c.id === chapterId);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const filled = useRef(false);
@@ -35,6 +40,7 @@ export default function EcrireScreen() {
       filled.current = true;
       setTitle(existing.title);
       setContent(existing.content);
+      setPhotos(existing.photos ?? []);
     }
   }, [existing]);
 
@@ -47,11 +53,22 @@ export default function EcrireScreen() {
   const save = useMutation({
     mutationFn: () =>
       chapterId
-        ? api(`/chapters/${chapterId}`, { method: "PATCH", body: { title, content } })
-        : api(`/books/${bookId}/chapters`, { method: "POST", body: { title, content } }),
+        ? api(`/chapters/${chapterId}`, { method: "PATCH", body: { title, content, photos } })
+        : api(`/books/${bookId}/chapters`, { method: "POST", body: { title, content, photos } }),
     onSuccess: () => done(chapterId ? "Chapitre enregistré" : "Chapitre ajouté !"),
     onError: (e: Error) => setError(e.message),
   });
+  const addPhoto = async (source: "camera" | "library") => {
+    setAdding(true);
+    try {
+      const path = await pickCover(source, () => toast(source === "camera" ? "Accès à l'appareil photo refusé" : "Accès aux photos refusé"));
+      if (path) setPhotos((p) => [...p, path]);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Envoi impossible");
+    } finally {
+      setAdding(false);
+    }
+  };
   const remove = useMutation({
     mutationFn: () => api(`/chapters/${chapterId}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -94,6 +111,23 @@ export default function EcrireScreen() {
           multiline
           style={styles.content}
         />
+        <Text style={styles.label}>Photos</Text>
+        {photos.length > 0 && (
+          <View style={styles.photoRow}>
+            {photos.map((path, idx) => (
+              <View key={path} style={styles.thumb} testID={`chapter-photo-${idx}`}>
+                <Image source={fileSource(path)} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                <Pressable style={styles.thumbX} hitSlop={6} onPress={() => setPhotos((p) => p.filter((x) => x !== path))} testID={`chapter-photo-remove-${idx}`}>
+                  <Feather name="x" size={14} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <SketchButton label="Prendre une photo" icon="camera" variant="secondary" testID="chapter-photo-camera" loading={adding} onPress={() => addPhoto("camera")} style={{ flex: 1 }} />
+          <SketchButton label="Galerie" icon="image" variant="secondary" testID="chapter-photo-library" disabled={adding} onPress={() => addPhoto("library")} style={{ flex: 1 }} />
+        </View>
         {!!error && <Text style={styles.error} testID="chapter-form-error">{error}</Text>}
         <SketchButton
           label="Enregistrer"
@@ -122,6 +156,10 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
   book: { fontFamily: fonts.hand, fontSize: 22, color: c.muted },
   content: { minHeight: 320, textAlignVertical: "top", fontSize: 16, lineHeight: 26 },
+  label: { fontFamily: fonts.hand, fontSize: 22, color: c.onSurface },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  thumb: { width: 96, height: 96, borderRadius: 12, overflow: "hidden", borderWidth: 1.5, borderColor: c.border },
+  thumbX: { position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
   error: { fontFamily: fonts.bodyBold, color: c.error, fontSize: 14 },
   body: { fontFamily: fonts.body, fontSize: 15, color: c.onSurface },
 }));

@@ -1,6 +1,6 @@
 """Librairie : petits livres écrits par l'admin (chapitres), lisibles par nous deux."""
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
 import io
 import re
@@ -28,6 +28,7 @@ class Chapter(BaseDocument):
     book_id: str
     title: str
     content: str = ""
+    photos: List[str] = []  # photos du chapitre, affichées avant le texte
     order: int = 0
     created_at: str
 
@@ -48,11 +49,13 @@ class BookPatch(BaseModel):
 class ChapterIn(BaseModel):
     title: str
     content: str = ""
+    photos: List[str] = []
 
 
 class ChapterPatch(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    photos: Optional[List[str]] = None
 
 
 async def _book(book_id: str) -> dict:
@@ -66,7 +69,12 @@ async def _touch(book_id: str) -> None:
     await db.books.update_one({"_id": oid(book_id)}, {"$set": {"updated_at": now_iso()}})
 
 
-def _check_chapter(title: Optional[str], content: Optional[str]) -> None:
+def _check_chapter(title: Optional[str], content: Optional[str], photos: Optional[List[str]] = None) -> None:
+    if photos is not None:
+        if len(photos) > 12:
+            raise HTTPException(400, "12 photos maximum par chapitre")
+        for ph in photos:
+            _check_cover(ph)
     if title is not None and not title.strip():
         raise HTTPException(400, "Donne un titre au chapitre")
     if content is not None and len(content) > MAX_CONTENT:
@@ -167,9 +175,9 @@ async def delete_book(book_id: str, _: User = Depends(require_admin)):
 @router.post("/books/{book_id}/chapters")
 async def add_chapter(book_id: str, body: ChapterIn, _: User = Depends(require_admin)):
     await _book(book_id)
-    _check_chapter(body.title, body.content)
+    _check_chapter(body.title, body.content, body.photos)
     last = await db.chapters.find_one({"book_id": book_id}, sort=[("order", -1)])
-    chapter = Chapter(book_id=book_id, title=body.title.strip()[:120], content=body.content,
+    chapter = Chapter(book_id=book_id, title=body.title.strip()[:120], content=body.content, photos=body.photos,
                       order=(last["order"] + 1) if last else 0, created_at=now_iso())
     res = await db.chapters.insert_one(chapter.to_mongo())
     chapter.id = str(res.inserted_id)
@@ -179,7 +187,7 @@ async def add_chapter(book_id: str, body: ChapterIn, _: User = Depends(require_a
 
 @router.patch("/chapters/{chapter_id}")
 async def update_chapter(chapter_id: str, body: ChapterPatch, _: User = Depends(require_admin)):
-    _check_chapter(body.title, body.content)
+    _check_chapter(body.title, body.content, body.photos)
     changes = body.model_dump(exclude_none=True)
     if "title" in changes:
         changes["title"] = changes["title"].strip()[:120]

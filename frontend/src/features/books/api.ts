@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import { api, API_URL, authHeaders } from "@/src/api";
 import { uploadForm } from "@/src/utils/upload";
 
-export type Chapter = { id: string; book_id: string; title: string; content: string; order: number };
+export type Chapter = { id: string; book_id: string; title: string; content: string; photos?: string[]; order: number };
 export type Book = {
   id: string;
   title: string;
