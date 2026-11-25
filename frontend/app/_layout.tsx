@@ -70,6 +70,7 @@ function AppStack() {
           <Stack.Screen name="librairie/[id]" />
           <Stack.Screen name="lecture" />
           <Stack.Screen name="cemantix" />
+          <Stack.Screen name="cemantix-historique" />
           <Stack.Screen name="voyages/index" />
           <Stack.Screen name="voyages/pays" />
           <Stack.Screen name="voyages/passeport" />

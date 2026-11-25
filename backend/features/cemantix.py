@@ -269,6 +269,51 @@ async def today(user: User = Depends(get_current_user)):
     return await _state(user)
 
 
+@router.get("/history")
+async def history(_: User = Depends(get_current_user)):
+    """Rétrospective : les nombres d'essais jour par jour, qui a gagné, et des stats par personne.
+    On ne montre que les jours finis (ou aujourd'hui si les deux ont déjà répondu), à partir de WINS_FROM."""
+    today = _today()
+    users = await db.users.find({}).to_list(10)
+    users.sort(key=lambda u: 0 if u.get("role") == "admin" else 1)
+    claims = await db.cemantix_claims.find({"status": "verified", "date": {"$gte": WINS_FROM}}).to_list(20000)
+    by_date: dict[str, list[dict]] = {}
+    for c in claims:
+        by_date.setdefault(c["date"], []).append(c)
+
+    days = []
+    for day in sorted(by_date, reverse=True):
+        dc = by_date[day]
+        complete = len({c["user_id"] for c in dc}) >= 2
+        if day == today and not complete:
+            continue  # pas de spoil : on ne dévoile les essais du jour qu'une fois les deux répondu
+        best = min(dc, key=_rank_key)
+        runner = [c for c in dc if c["user_id"] != best["user_id"]]
+        tie = bool(runner) and best.get("tries") is not None and best.get("tries") == runner[0].get("tries")
+        days.append({
+            "date": day,
+            "number": puzzle_number(day),
+            "complete": complete,
+            "winner_id": best["user_id"],
+            "tie": tie,
+            "tries": {c["user_id"]: c.get("tries") for c in dc},
+        })
+
+    stats = []
+    for u in users:
+        uid = str(u["_id"])
+        mine = [d for d in days if uid in d["tries"]]
+        tr = [d["tries"][uid] for d in mine if d["tries"][uid]]
+        stats.append({
+            "user_id": uid, "name": u["name"], "role": u.get("role", "partner"),
+            "played": len(mine),
+            "wins": sum(1 for d in days if d["winner_id"] == uid),
+            "avg": round(sum(tr) / len(tr), 1) if tr else None,
+            "best": min(tr) if tr else None,
+        })
+    return {"users": [{"user_id": x["user_id"], "name": x["name"], "role": x["role"]} for x in stats], "stats": stats, "days": days}
+
+
 class FoundIn(BaseModel):
     word: str
     tries: int

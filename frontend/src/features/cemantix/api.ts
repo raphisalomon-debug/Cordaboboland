@@ -38,3 +38,18 @@ export function useCemantixActions() {
 
 /** Roi pour l'admin (Raphi), reine pour le compte partenaire. */
 export const crownTitle = (role: "admin" | "partner") => (role === "admin" ? "Roi du jour" : "Reine du jour");
+
+export type HistoryDay = {
+  date: string;
+  number: number;
+  complete: boolean;
+  winner_id: string;
+  tie: boolean;
+  tries: Record<string, number | null>;
+};
+export type HistoryStat = { user_id: string; name: string; role: string; played: number; wins: number; avg: number | null; best: number | null };
+export type CemantixHistory = { users: { user_id: string; name: string; role: string }[]; stats: HistoryStat[]; days: HistoryDay[] };
+
+export function useCemantixHistory() {
+  return useQuery({ queryKey: ["cemantix", "history"], queryFn: () => api<CemantixHistory>("/cemantix/history") });
+}

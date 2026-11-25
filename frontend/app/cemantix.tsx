@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { Linking, Platform, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,6 +24,7 @@ export default function CemantixScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const router = useRouter();
   const { user } = useAuth();
   const { data, isLoading, refetch, isRefetching } = useCemantix();
   const { found, undo } = useCemantixActions();
@@ -194,6 +196,7 @@ export default function CemantixScreen() {
               </View>
             ))}
           </View>
+          <SketchButton testID="cemantix-history-button" label="Voir la rétrospective" icon="bar-chart-2" variant="secondary" onPress={() => router.push("/cemantix-historique")} />
           <Text style={styles.footnote}>
             Le mot change chaque nuit à minuit. Tape le mot trouvé et ton nombre d'essais : le mot est comparé à la
             solution du jour d'Alucare. Le moins d'essais gagne ; si un seul a répondu, le point est pour lui.
